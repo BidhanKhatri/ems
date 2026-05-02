@@ -227,7 +227,6 @@ export const checkOut = async (userId) => {
     throw new ApiError(400, 'Already checked out today');
   }
 
-  const now = new Date();
   attendance.checkOutTime = now;
 
   const settings = await getSettings();

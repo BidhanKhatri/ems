@@ -270,7 +270,7 @@ const WorkProgressBar = ({ settings, todayAttendance }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Check-In Card */}
         <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center">
-          <div className="flex flex-row items-center gap-3 sm:flex-col sm:mb-4">
+          <div className="flex flex-row items-center gap-3 mb-5 sm:flex-col sm:mb-4">
             <div className="w-10 h-10 sm:w-16 sm:h-16 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center shadow-inner border border-amber-200/50">
               <Clock className="w-5 h-5 sm:w-8 sm:h-8" />
             </div>

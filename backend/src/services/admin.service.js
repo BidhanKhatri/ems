@@ -9,9 +9,11 @@ import SystemSettings from '../models/SystemSettings.js';
 import ApiError from '../utils/ApiError.js';
 
 export const getDashboardStats = async () => {
-  const totalEmployees = await User.countDocuments({ role: 'EMPLOYEE' });
+  const totalEmployees = await User.countDocuments({ role: 'EMPLOYEE', approvalStatus: 'APPROVED' });
   const totalGroups = await Group.countDocuments();
   const pendingApprovals = await ApprovalRequest.countDocuments({ status: 'PENDING' });
+  const pendingAccounts = await User.countDocuments({ role: 'EMPLOYEE', approvalStatus: { $in: ['PENDING', null] } });
+  const totalPending = pendingApprovals + pendingAccounts;
   
   const today = new Date().toISOString().split('T')[0];
   const todayAttendances = await Attendance.countDocuments({ date: today });
@@ -25,9 +27,9 @@ export const getDashboardStats = async () => {
     timestamp: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
   });
 
-  const allEmployees = await User.find({ role: 'EMPLOYEE' })
+  const allEmployees = await User.find({ role: 'EMPLOYEE', approvalStatus: 'APPROVED' })
     .sort({ performanceScore: -1 })
-    .select('name email performanceScore totalPoints groupId createdAt');
+    .select('name email performanceScore totalPoints groupId createdAt profilePicture');
 
   // Enrich with attendance count and points last 7 days trend
   const sevenDaysAgo = new Date();
@@ -60,12 +62,17 @@ export const getDashboardStats = async () => {
       totalPoints: emp.totalPoints,
       totalAttendance,
       trend,
+      profilePicture: emp.profilePicture,
       rank: idx + 1,
     };
   }));
 
   return { 
-    totalEmployees, totalGroups, pendingApprovals, todayAttendances, 
+    totalEmployees, totalGroups, 
+    pendingApprovals: totalPending,
+    pendingCheckins: pendingApprovals,
+    pendingAccounts,
+    todayAttendances, 
     trackingEnabled,
     activeTrackingNow,
     missedActivityToday,
@@ -75,7 +82,7 @@ export const getDashboardStats = async () => {
 };
 
 export const getPendingApprovals = async () => {
-  return await ApprovalRequest.find({ status: 'PENDING' }).populate('userId', 'name email');
+  return await ApprovalRequest.find({ status: 'PENDING' }).populate('userId', 'name email profilePicture');
 };
 
 export const processApproval = async (requestId, adminId, isApproved) => {
@@ -129,11 +136,16 @@ export const getUsers = async (query) => {
   const { page = 1, limit = 10, search = '' } = query;
   const skip = (page - 1) * limit;
 
-  const filter = {};
+  const filter = { role: 'EMPLOYEE', approvalStatus: 'APPROVED' };
   if (search) {
-    filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+    filter.$and = [
+      { role: 'EMPLOYEE', approvalStatus: 'APPROVED' },
+      {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ]
+      }
     ];
   }
 
@@ -216,7 +228,7 @@ export const processFeedback = async (userId, adminId, { text, points, imageUrl 
       audience: 'EMPLOYEE',
       title: points !== 0 ? `Feedback Received (${points > 0 ? '+' : ''}${points} pts)` : 'Feedback Received',
       message: text,
-      metadata: { feedbackId: feedback[0]._id, points }
+      metadata: { feedbackId: feedback[0]._id, points, imageUrl }
     }], { session });
 
     await session.commitTransaction();
@@ -246,4 +258,47 @@ export const processFeedback = async (userId, adminId, { text, points, imageUrl 
     session.endSession();
     throw error;
   }
+};
+
+export const getAccountApprovals = async (query) => {
+  const { page = 1, limit = 5, status = '', search = '' } = query;
+  const skip = (page - 1) * limit;
+
+  const filter = { role: 'EMPLOYEE' };
+  if (status === 'PENDING') {
+    filter.approvalStatus = { $in: ['PENDING', null] };
+  } else if (status) {
+    filter.approvalStatus = status;
+  }
+
+  if (search) {
+    filter.email = { $regex: search, $options: 'i' };
+  }
+
+  const users = await User.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const totalUsers = await User.countDocuments(filter);
+  const totalPages = Math.ceil(totalUsers / limit);
+
+  return {
+    users,
+    totalUsers,
+    totalPages,
+    currentPage: Number(page),
+  };
+};
+
+export const updateAccountApprovalStatus = async (userId, status) => {
+  if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+    throw new ApiError(400, 'Invalid status');
+  }
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  user.approvalStatus = status;
+  await user.save();
+  return user;
 };

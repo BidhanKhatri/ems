@@ -106,10 +106,30 @@ export const checkIn = async (userId) => {
     if (needsApproval) {
       const checkInTimeStr = format(now, 'hh:mm a');
       const delayMins = currentTimeInMinutes - targetTimeInMinutes;
+      
+      const formatLateness = (mins) => {
+        if (mins < 60) return `${mins} min`;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${h} hrs ${m} min`;
+      };
+
+      const formatToAMPM = (time24) => {
+        if (!time24) return time24;
+        const [h, m] = time24.split(':');
+        const hour = parseInt(h);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        return `${hour12}:${m} ${ampm}`;
+      };
+
+      const latenessStr = formatLateness(delayMins);
+      const scheduledTimeStr = formatToAMPM(settings.checkInTime);
+
       await ApprovalRequest.create([{
         userId,
         attendanceId: attendance[0]._id,
-        reason: `Late check-in at ${checkInTimeStr}. Delayed by ${delayMins} minutes (Scheduled: ${settings.checkInTime}).`
+        reason: `Late check-in at ${checkInTimeStr}. Delayed by ${latenessStr} (Scheduled: ${scheduledTimeStr}).`
       }], { session });
 
       // Send email notification to admin
@@ -117,31 +137,43 @@ export const checkIn = async (userId) => {
         const user = await User.findById(userId).session(session);
         const subject = `Approval Required: Late Check-In - ${user.name}`;
         const html = `
-          <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-            <h2 style="color: #d97706;">Late Check-In Approval Required</h2>
-            <p>Hello Admin,</p>
-            <p>An employee has checked in late and requires your approval:</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <tr>
-                <td style="padding: 8px; border: 1px solid #eee; font-weight: bold; width: 140px;">Employee:</td>
-                <td style="padding: 8px; border: 1px solid #eee;">${user.name} (${user.email})</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #eee; font-weight: bold;">Check-In Time:</td>
-                <td style="padding: 8px; border: 1px solid #eee;">${checkInTimeStr}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #eee; font-weight: bold;">Lateness:</td>
-                <td style="padding: 8px; border: 1px solid #eee; color: #b91c1c;">${delayMins} minutes late</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #eee; font-weight: bold;">Scheduled:</td>
-                <td style="padding: 8px; border: 1px solid #eee;">${settings.checkInTime}</td>
-              </tr>
-            </table>
-            <p>Please log in to the Admin Portal to review and approve/reject this request.</p>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #666;">This is an automated notification from the EMS System.</p>
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div style="background-color: #fef3c7; padding: 24px; text-align: center; border-bottom: 1px solid #fde68a;">
+              <h2 style="color: #92400e; margin: 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Late Check-In Request</h2>
+            </div>
+            <div style="padding: 32px; background-color: #ffffff;">
+              <p style="margin-top: 0; font-size: 16px;">Hello <strong>Admin</strong>,</p>
+              <p style="color: #4b5563; font-size: 14px;">An employee has registered a late check-in and requires your administrative review.</p>
+              
+              <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #f3f4f6;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 120px;">Employee</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">${user.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase;">Check-In Time</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">${checkInTimeStr}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase;">Lateness</td>
+                    <td style="padding: 8px 0; color: #b91c1c; font-size: 14px; font-weight: 800;">${latenessStr} delayed</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase;">Scheduled</td>
+                    <td style="padding: 8px 0; color: #4b5563; font-size: 14px; font-weight: 500;">${scheduledTimeStr}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="text-align: center; margin-top: 32px;">
+                <a href="https://staffingbetit.com/admin/approvals" style="background-color: #92400e; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Review Approval Request</a>
+              </div>
+              
+              <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">
+                This is an automated notification from Staffingbetit.
+              </p>
+            </div>
           </div>
         `;
         

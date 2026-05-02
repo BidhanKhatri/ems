@@ -13,6 +13,11 @@ const ProtectedRoute = ({ allowedRoles }) => {
     return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />;
   }
 
+  // Handle employee approval status
+  if (user.role === 'EMPLOYEE' && user.approvalStatus !== 'APPROVED') {
+    return <Navigate to="/approval-status" replace />;
+  }
+
   return <Outlet />;
 };
 

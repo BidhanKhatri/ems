@@ -21,9 +21,8 @@ const DatePickerBtn = ({ value, onChange, placeholder, min }) => {
     >
       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 pointer-events-none z-10" />
       {/* Styled display */}
-      <div className={`w-full pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-xl text-sm select-none ${
-        value ? 'text-stone-800 font-semibold' : 'text-stone-400'
-      }`}>
+      <div className={`w-full pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-xl text-sm select-none ${value ? 'text-stone-800 font-semibold' : 'text-stone-400'
+        }`}>
         {value ? fmt(value) : placeholder}
       </div>
       {/* Hidden native input — positioned exactly over the display */}
@@ -42,12 +41,12 @@ const DatePickerBtn = ({ value, onChange, placeholder, min }) => {
 
 /* ── helpers ── */
 const STATUS_CONFIG = {
-  EARLY:            { label: 'Early',           bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  ON_TIME:          { label: 'On Time',          bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
-  LATE:             { label: 'Late',             bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200'   },
-  PENDING_APPROVAL: { label: 'Pending',          bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200'  },
-  LATE_APPROVED:    { label: 'Late · Approved',  bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200'    },
-  LATE_REJECTED:    { label: 'Rejected',         bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200'     },
+  EARLY: { label: 'Early', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  ON_TIME: { label: 'On Time', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  LATE: { label: 'Late', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  PENDING_APPROVAL: { label: 'Pending', bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  LATE_APPROVED: { label: 'Late · Approved', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+  LATE_REJECTED: { label: 'Rejected', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
 };
 
 const StatusBadge = ({ status }) => {
@@ -60,12 +59,12 @@ const StatusBadge = ({ status }) => {
 };
 
 const FILTERS = [
-  { key: 'ALL',          label: 'All' },
-  { key: 'EARLY',        label: 'Early' },
-  { key: 'ON_TIME',      label: 'On Time' },
-  { key: 'LATE',         label: 'Late' },
-  { key: 'LATE_APPROVED',label: 'Approved' },
-  { key: 'LATE_REJECTED',label: 'Rejected' },
+  { key: 'ALL', label: 'All' },
+  { key: 'EARLY', label: 'Early' },
+  { key: 'ON_TIME', label: 'On Time' },
+  { key: 'LATE', label: 'Late' },
+  { key: 'LATE_APPROVED', label: 'Approved' },
+  { key: 'LATE_REJECTED', label: 'Rejected' },
   { key: 'PENDING_APPROVAL', label: 'Pending' },
 ];
 
@@ -122,22 +121,26 @@ const AttendanceHistory = () => {
   };
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="space-y-5 pb-10 max-w-full overflow-x-hidden px-1 sm:px-0 bg-[#F5F3EE]">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-stone-800 tracking-tight flex items-center gap-2">
-            <History className="w-5 h-5 text-amber-600" /> Attendance History
-          </h1>
-          <p className="text-sm text-stone-400 mt-0.5">Your full check-in / check-out log with status and points.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+            <History className="w-4 h-4 text-amber-600" />
+          </div>
+          <div>
+            <h1 className="text-base sm:text-xl font-bold text-stone-800 tracking-tight">
+              Attendance History
+            </h1>
+            <p className="hidden sm:block text-sm text-stone-400 mt-0.5">Your personal check-in / check-out logs.</p>
+          </div>
         </div>
-        {/* Summary chips */}
         {!loading && (
-          <div className="flex items-center gap-3 text-xs text-stone-500">
-            <span className="bg-stone-100 border border-stone-200 rounded-lg px-3 py-1.5 font-semibold text-stone-700">
-              {filtered.length} records
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs text-stone-500 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0">
+            <span className="bg-stone-100 border border-stone-200 rounded-lg px-2 py-1 font-bold text-stone-700 shrink-0">
+              {filtered.length} logs
             </span>
-            <span className={`rounded-lg px-3 py-1.5 font-bold border ${totalPoints >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            <span className={`rounded-lg px-2 py-1 font-black border shrink-0 ${totalPoints >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
               {totalPoints > 0 ? '+' : ''}{totalPoints} pts
             </span>
           </div>
@@ -145,19 +148,21 @@ const AttendanceHistory = () => {
       </div>
 
       {/* ── Filter Bar ── */}
-      <div className="bg-[#FAF8F5] rounded-2xl border border-stone-200 shadow-sm p-4 space-y-3">
+      <div className="bg-[#FAF8F5] rounded-2xl border border-stone-200 shadow-sm p-3 sm:p-4 space-y-4">
         {/* Status filter pills */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <Filter className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <div className="flex items-center gap-1.5 mr-1 mb-1 sm:mb-0">
+            <Filter className="w-3 h-3 text-stone-400" />
+            <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest hidden xs:block">Filter:</span>
+          </div>
           {FILTERS.map(f => (
             <button
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                statusFilter === f.key
+              className={`px-2.5 py-1.5 rounded-xl text-[9px] font-black border transition-all ${statusFilter === f.key
                   ? 'bg-stone-800 text-white border-stone-800 shadow-sm'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'
-              }`}
+                  : 'bg-white text-stone-600 border-stone-100 hover:border-stone-300'
+                }`}
             >
               {f.label}
             </button>
@@ -165,32 +170,35 @@ const AttendanceHistory = () => {
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="ml-auto flex items-center gap-1 text-xs text-stone-400 hover:text-stone-700 transition-colors font-medium"
+              className="flex items-center gap-1 text-[9px] text-stone-400 hover:text-red-500 transition-colors font-black ml-auto pl-2"
             >
-              <X className="w-3 h-3" /> Clear
+              <X className="w-3 h-3" /> CLEAR
             </button>
           )}
         </div>
 
-        {/* Date range */}
-        <div className="flex flex-row items-center gap-2">
-          <DatePickerBtn
-            value={dateFrom}
-            onChange={setDateFrom}
-            placeholder="From"
-          />
-          <span className="text-stone-300 text-sm flex-shrink-0">→</span>
-          <DatePickerBtn
-            value={dateTo}
-            onChange={setDateTo}
-            placeholder="To"
-            min={dateFrom || undefined}
-          />
+        <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex-1">
+            <DatePickerBtn
+              value={dateFrom}
+              onChange={setDateFrom}
+              placeholder="From"
+            />
+          </div>
+          <span className="hidden xs:block text-stone-300 text-sm flex-shrink-0">→</span>
+          <div className="flex-1">
+            <DatePickerBtn
+              value={dateTo}
+              onChange={setDateTo}
+              placeholder="To"
+              min={dateFrom || undefined}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="bg-[#FAF8F5] rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      {/* ── Table / List Area ── */}
+      <div className="bg-[#FAF8F5] rounded-2xl border border-stone-200 shadow-sm overflow-x-auto hide-scrollbar">
         {loading ? (
           <div className="py-20 text-center">
             <div className="w-8 h-8 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-3" />
@@ -272,8 +280,14 @@ const AttendanceHistory = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5 text-stone-500">
                             <LogOut className="w-3.5 h-3.5 text-stone-300 flex-shrink-0" />
-                            <span className={record.checkOutTime ? 'font-medium text-stone-700' : 'text-stone-300 italic'}>
-                              {record.checkOutTime ? formatTime(record.checkOutTime) : 'Not yet'}
+                            <span className={record.checkOutTime ? 'font-medium text-stone-700' : record.status === 'LATE_REJECTED' ? 'text-stone-300' : isToday ? 'text-amber-500 italic' : 'text-red-500 font-bold uppercase text-[10px]'}>
+                              {record.checkOutTime
+                                ? formatTime(record.checkOutTime)
+                                : record.status === 'LATE_REJECTED'
+                                  ? '—'
+                                  : isToday
+                                    ? 'Still in'
+                                    : 'Missed'}
                             </span>
                           </div>
                         </td>
@@ -297,8 +311,8 @@ const AttendanceHistory = () => {
                             {pts > 0
                               ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                               : pts < 0
-                              ? <TrendingDown className="w-3.5 h-3.5 text-red-400" />
-                              : null
+                                ? <TrendingDown className="w-3.5 h-3.5 text-red-400" />
+                                : null
                             }
                             <span className={`font-extrabold tabular-nums text-sm ${pts > 0 ? 'text-emerald-600' : pts < 0 ? 'text-red-500' : 'text-stone-400'}`}>
                               {pts > 0 ? '+' : ''}{pts}
@@ -323,7 +337,7 @@ const AttendanceHistory = () => {
                 paged.map((record) => {
                   const pts = Number(record.pointsAwarded || 0);
                   const isToday = record.date === new Date().toISOString().split('T')[0];
-                  
+
                   let duration = '—';
                   if (record.checkInTime && record.checkOutTime) {
                     const cin = new Date(record.checkInTime);
@@ -362,8 +376,14 @@ const AttendanceHistory = () => {
                           <p className="text-[9px] uppercase font-bold text-stone-400 tracking-widest">Check Out</p>
                           <div className="flex items-center gap-1.5">
                             <LogOut className="w-3.5 h-3.5 text-stone-300" />
-                            <span className={`text-sm font-bold ${record.checkOutTime ? 'text-stone-700' : 'text-stone-400 italic'}`}>
-                              {record.checkOutTime ? formatTime(record.checkOutTime) : 'Not yet'}
+                            <span className={`text-sm font-bold ${record.checkOutTime ? 'text-stone-700' : record.status === 'LATE_REJECTED' ? 'text-stone-300' : isToday ? 'text-amber-500 italic' : 'text-red-600 uppercase text-xs'}`}>
+                              {record.checkOutTime
+                                ? formatTime(record.checkOutTime)
+                                : record.status === 'LATE_REJECTED'
+                                  ? '—'
+                                  : isToday
+                                    ? 'Still in'
+                                    : 'Missed'}
                             </span>
                           </div>
                         </div>
@@ -422,11 +442,10 @@ const AttendanceHistory = () => {
                         <button
                           key={pg}
                           onClick={() => setPage(pg)}
-                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                            page === pg
-                              ? 'bg-stone-800 text-white shadow-sm'
-                              : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
-                          }`}
+                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${page === pg
+                            ? 'bg-stone-800 text-white shadow-sm'
+                            : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
+                            }`}
                         >
                           {pg}
                         </button>

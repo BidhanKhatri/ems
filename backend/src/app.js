@@ -1,8 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import ApiError from './utils/ApiError.js';
@@ -20,9 +21,9 @@ import groupRoutes from './routes/group.routes.js';
 import settingRoutes from './routes/setting.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import scheduleRoutes from './routes/schedule.routes.js';
+import userRoutes from './routes/user.routes.js';
 
-dotenv.config();
-
+// app setup
 const app = express();
 
 // Connect to MongoDB
@@ -63,6 +64,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('EMS API is running.');

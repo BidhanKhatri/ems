@@ -16,7 +16,14 @@ export const login = catchAsync(async (req, res) => {
   const tokens = authService.generateTokens(user.id, user.role);
   
   res.send({ 
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, performanceScore: user.performanceScore }, 
+    user: { 
+      id: user._id, 
+      name: user.name, 
+      email: user.email, 
+      role: user.role, 
+      performanceScore: user.performanceScore,
+      approvalStatus: user.approvalStatus
+    }, 
     tokens 
   });
 });
@@ -42,6 +49,8 @@ export const getProfile = catchAsync(async (req, res) => {
       email: user.email,
       role: user.role,
       performanceScore: user.performanceScore,
+      profilePicture: user.profilePicture,
+      approvalStatus: user.approvalStatus,
     },
   });
 });
@@ -58,6 +67,7 @@ export const updateProfile = catchAsync(async (req, res) => {
       email: updatedUser.email,
       role: updatedUser.role,
       performanceScore: updatedUser.performanceScore,
+      profilePicture: updatedUser.profilePicture,
     },
   });
 });

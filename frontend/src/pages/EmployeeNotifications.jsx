@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { BellRing } from 'lucide-react';
+import { BellRing, ImageIcon, X, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 
 const EmployeeNotifications = () => {
   const [sortMode, setSortMode] = useState('latest');
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [viewingImage, setViewingImage] = useState(null);
 
   const fetchNotifications = async (mode = sortMode) => {
     setLoading(true);
@@ -84,20 +85,73 @@ const EmployeeNotifications = () => {
                     <p className="text-xs text-stone-600 mt-1">{n.message}</p>
                     <p className="text-[11px] text-stone-400 mt-2">{new Date(n.createdAt).toLocaleString()}</p>
                   </div>
-                  {!n.isRead && (
-                    <button
-                      onClick={() => markNotificationAsRead(n._id)}
-                      className="text-[11px] font-semibold text-amber-700 hover:text-amber-900"
-                    >
-                      Mark read
-                    </button>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {!n.isRead && (
+                      <button
+                        onClick={() => markNotificationAsRead(n._id)}
+                        className="text-[11px] font-semibold text-amber-700 hover:text-amber-900"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                    {n.metadata?.imageUrl && (
+                      <button
+                        onClick={() => setViewingImage(n.metadata.imageUrl)}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-white border border-stone-200 rounded-lg text-[10px] font-bold text-stone-600 hover:bg-stone-50 hover:text-amber-800 transition-all shadow-sm"
+                        title="View attached image"
+                      >
+                        <ImageIcon className="w-3 h-3" />
+                        Preview
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Image Preview Modal */}
+      {viewingImage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-10 backdrop-blur-md bg-stone-900/40 animate-in fade-in duration-200">
+          <div className="relative max-w-4xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="absolute top-4 right-4 z-10 flex gap-2">
+              <a
+                href={viewingImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white/80 backdrop-blur-md text-stone-700 rounded-xl hover:bg-white transition-colors shadow-sm"
+                title="Open in new tab"
+              >
+                <ExternalLink className="w-5 h-5" />
+              </a>
+              <button
+                onClick={() => setViewingImage(null)}
+                className="p-2 bg-white/80 backdrop-blur-md text-stone-700 rounded-xl hover:bg-white transition-colors shadow-sm"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-2 sm:p-4 bg-stone-50">
+              <img
+                src={viewingImage}
+                alt="Feedback Attachment"
+                className="w-full h-auto max-h-[80vh] object-contain rounded-2xl shadow-inner"
+              />
+            </div>
+            <div className="px-6 py-4 border-t border-stone-100 flex items-center justify-between">
+              <p className="text-xs font-bold text-stone-500 uppercase tracking-widest">Feedback Attachment</p>
+              <button
+                onClick={() => setViewingImage(null)}
+                className="text-sm font-bold text-amber-800 hover:underline"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

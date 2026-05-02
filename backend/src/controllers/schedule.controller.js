@@ -11,7 +11,9 @@ export const getSchedules = catchAsync(async (req, res) => {
   const { employeeId, startDate, endDate } = req.query;
   const filter = {};
 
-  if (employeeId) {
+  if (req.user.role === 'EMPLOYEE') {
+    filter.employeeId = req.user._id;
+  } else if (employeeId) {
     filter.employeeId = employeeId;
   }
   

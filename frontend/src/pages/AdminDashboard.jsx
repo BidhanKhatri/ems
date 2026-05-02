@@ -1,21 +1,21 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
 import {
   Users, AlertCircle, CalendarCheck, Trophy, TrendingUp, TrendingDown,
   BarChart2, X, Mail, Star, Calendar, Search, ChevronLeft, ChevronRight,
-  MessageSquarePlus, Image as ImageIcon
+  MessageSquarePlus, Image as ImageIcon, RotateCw, LayoutDashboard
 } from 'lucide-react';
 
 /* ─── Stat Card ─────────────────────────────────────────────── */
 const StatCard = ({ title, value, icon: Icon, colorClass, bgColor }) => (
-  <div className={`${bgColor} p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center`}>
-    <div className={`p-4 rounded-xl mr-4 ${colorClass}`}>
-      {Icon && <Icon className="w-6 h-6" />}
+  <div className={`${bgColor} p-3 sm:p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4`}>
+    <div className={`p-2 sm:p-4 rounded-xl ${colorClass} shrink-0`}>
+      {Icon && <Icon className="w-4 h-4 sm:w-6 sm:h-6" />}
     </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+    <div className="min-w-0">
+      <p className="text-[10px] sm:text-sm font-bold sm:font-medium text-gray-500 uppercase tracking-wider sm:normal-case sm:tracking-normal truncate">{title}</p>
+      <p className="text-lg sm:text-2xl font-black sm:font-bold text-gray-900 tabular-nums leading-tight">{value}</p>
     </div>
   </div>
 );
@@ -34,8 +34,14 @@ const PodiumCard = ({ user, index, onViewDetails }) => {
   return (
     <div className={`relative rounded-2xl overflow-visible shadow-md border-2 ${cfg.border} bg-white`}>
       <div className={`absolute -top-7 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full ring-2 ${cfg.ring} ring-offset-2 ring-offset-white flex items-center justify-center shadow-lg text-base font-extrabold bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 z-10`}>
-        {initials}
-        <span className="absolute -bottom-1 -right-1 text-base leading-none">{cfg.label}</span>
+        <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+          {user.profilePicture ? (
+            <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+          ) : (
+            initials
+          )}
+        </div>
+        <span className="absolute -bottom-1 -right-1 text-base leading-none z-20">{cfg.label}</span>
       </div>
       <div className="pt-10 pb-4 px-4 flex flex-col items-center text-center">
         <span className={`text-[10px] font-extrabold uppercase tracking-widest ${cfg.rankText}`}>{cfg.rank} Place</span>
@@ -76,57 +82,85 @@ const PodiumCard = ({ user, index, onViewDetails }) => {
 
 
 /* ─── Employee Detail Modal ──────────────────────────────────── */
+/* ─── Employee Detail Modal ──────────────────────────────────── */
 const EmployeeModal = ({ employee, onClose }) => {
   if (!employee) return null;
   const initials = employee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-3xl p-6 text-white relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 p-1.5 rounded-full transition-all"
-          >
-            <X className="w-4 h-4" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/20">
+      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-2xl font-extrabold ring-2 ring-white/50">
-              {initials}
+            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-lg font-extrabold text-indigo-600 border border-indigo-100 overflow-hidden">
+              {employee.profilePicture ? (
+                <img src={employee.profilePicture} alt={employee.name} className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
             <div>
-              <h2 className="text-xl font-bold">{employee.name}</h2>
-              <p className="text-indigo-200 text-sm">Rank #{employee.rank}</p>
+              <h2 className="text-xl font-bold text-gray-900">{employee.name}</h2>
+              <p className="text-xs text-indigo-500 font-bold uppercase tracking-wider">Rank #{employee.rank}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-6">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5 ml-1">Employee Details</label>
+            <div className="flex items-center gap-3 bg-gray-50/80 p-4 rounded-2xl border border-gray-100">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                <Mail className="w-5 h-5 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">{employee.email}</p>
+                <p className="text-[11px] text-gray-500 font-medium">Registered Account</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5 ml-1">Performance Overview</label>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                <p className="text-2xl font-black text-indigo-600 tabular-nums leading-none">{employee.performanceScore}</p>
+                <p className="text-[10px] font-bold text-indigo-400 uppercase mt-2 flex items-center justify-center gap-1">
+                  <Star className="w-3 h-3" /> Score
+                </p>
+              </div>
+              <div className="text-center bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50">
+                <p className="text-2xl font-black text-emerald-600 tabular-nums leading-none">{employee.totalAttendance}</p>
+                <p className="text-[10px] font-bold text-emerald-400 uppercase mt-2 flex items-center justify-center gap-1">
+                  <Calendar className="w-3 h-3" /> Days
+                </p>
+              </div>
+              <div className="text-center bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50">
+                <p className={`text-2xl font-black tabular-nums leading-none ${employee.trend >= 0 ? 'text-amber-600' : 'text-rose-600'}`}>
+                  {employee.trend >= 0 ? '+' : ''}{employee.trend}
+                </p>
+                <p className="text-[10px] font-bold text-amber-500 uppercase mt-2 flex items-center justify-center gap-1">
+                  {employee.trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  Trend
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-            <Mail className="w-5 h-5 text-gray-400" />
-            <div>
-              <p className="text-xs text-gray-500">Email</p>
-              <p className="font-semibold text-gray-800">{employee.email}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center bg-indigo-50 p-3 rounded-xl border border-indigo-100">
-              <p className="text-2xl font-extrabold text-indigo-600">{employee.performanceScore}</p>
-              <p className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-1"><Star className="w-3 h-3 text-yellow-400" /> Score</p>
-            </div>
-            <div className="text-center bg-green-50 p-3 rounded-xl border border-green-100">
-              <p className="text-2xl font-extrabold text-green-600">{employee.totalAttendance}</p>
-              <p className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-1"><Calendar className="w-3 h-3 text-green-400" /> Days</p>
-            </div>
-            <div className="text-center bg-purple-50 p-3 rounded-xl border border-purple-100">
-              <p className={`text-2xl font-extrabold ${employee.trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                {employee.trend >= 0 ? '+' : ''}{employee.trend}
-              </p>
-              <p className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
-                {employee.trend >= 0 ? <TrendingUp className="w-3 h-3 text-emerald-500" /> : <TrendingDown className="w-3 h-3 text-red-400" />}
-                7d Trend
-              </p>
-            </div>
-          </div>
+
+        {/* Footer Action */}
+        <div className="mt-8">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+          >
+            Close Details
+          </button>
         </div>
       </div>
     </div>
@@ -134,11 +168,12 @@ const EmployeeModal = ({ employee, onClose }) => {
 };
 
 /* ─── Feedback Modal ─────────────────────────────────────────── */
-const FeedbackModal = ({ employeeId, onClose }) => {
+const FeedbackModal = ({ employeeId, onClose, onSuccess }) => {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackPoints, setFeedbackPoints] = useState('');
   const [feedbackImage, setFeedbackImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -153,6 +188,7 @@ const FeedbackModal = ({ employeeId, onClose }) => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success('Feedback submitted and employee notified');
+      onSuccess?.();
       onClose();
     } catch (err) {
       console.error(err);
@@ -195,15 +231,49 @@ const FeedbackModal = ({ employeeId, onClose }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Attach Image</label>
-              <label className="w-full px-3 py-3 bg-gray-50 border border-gray-200 border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors overflow-hidden">
-                <ImageIcon className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                <span className="text-xs text-gray-500 font-medium truncate">
-                  {feedbackImage ? feedbackImage.name : 'Choose File'}
-                </span>
-                <input type="file" accept="image/*" onChange={e => setFeedbackImage(e.target.files[0])} className="hidden" />
-              </label>
+              <div className="flex gap-2">
+                <label className={`flex-1 px-3 py-3 bg-gray-50 border border-gray-200 border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors overflow-hidden ${feedbackImage ? 'ring-2 ring-indigo-500/20 border-indigo-500' : ''}`}>
+                  <ImageIcon className={`w-4 h-4 mr-2 ${feedbackImage ? 'text-indigo-500' : 'text-gray-400'} flex-shrink-0`} />
+                  <span className={`text-xs text-gray-500 font-medium truncate ${feedbackImage ? 'text-indigo-700' : 'text-gray-500'}`}>
+                    {feedbackImage ? feedbackImage.name : 'Choose File'}
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setFeedbackImage(e.target.files[0])}
+                    className="hidden"
+                  />
+                </label>
+                {feedbackImage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeedbackImage(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="p-3 bg-red-50 text-red-500 border border-red-100 rounded-xl hover:bg-red-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Image Preview */}
+          {feedbackImage && (
+            <div className="relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 aspect-video group">
+              <img
+                src={URL.createObjectURL(feedbackImage)}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <p className="text-white text-[10px] font-bold uppercase tracking-widest">Image Preview</p>
+              </div>
+            </div>
+          )}
           <div className="flex gap-3 mt-4">
             <button
               type="button"
@@ -235,16 +305,23 @@ const AdminDashboard = () => {
   const [feedbackFor, setFeedbackFor] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchStats = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const { data } = await api.get('/admin/dashboard');
+      setStats(data);
+      if (isManual) toast.success('Dashboard data synchronized');
+    } catch (error) {
+      console.error('Failed to fetch admin stats', error);
+      if (isManual) toast.error('Failed to sync data');
+    } finally {
+      if (isManual) setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await api.get('/admin/dashboard');
-        setStats(data);
-      } catch (error) {
-        console.error('Failed to fetch admin stats', error);
-      }
-    };
     fetchStats();
   }, []);
 
@@ -275,17 +352,32 @@ const AdminDashboard = () => {
     <>
       <div className="space-y-8 pb-10">
         {/* Page Title */}
-        <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Admin Overview</h1>
-          <p className="text-gray-500 text-sm mt-1">Live workforce performance at a glance.</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 bg-white border border-indigo-100 rounded-xl sm:rounded-2xl shadow-sm shrink-0">
+              <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight truncate">Admin Overview</h1>
+              <p className="hidden sm:block text-gray-500 text-sm mt-1">Live workforce performance at a glance.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => fetchStats(true)}
+            disabled={refreshing}
+            className="flex items-center justify-center p-2.5 sm:px-4 sm:py-2.5 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm disabled:opacity-50 group shrink-0"
+          >
+            <RotateCw className={`w-4 h-4 text-indigo-500 ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            <span className="hidden sm:inline ml-2">{refreshing ? 'Syncing...' : 'Refresh Data'}</span>
+          </button>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Total Employees" value={stats.totalEmployees} icon={Users} colorClass="bg-blue-100 text-blue-600" bgColor="bg-blue-50" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <StatCard title="Employees" value={stats.totalEmployees} icon={Users} colorClass="bg-blue-100 text-blue-600" bgColor="bg-blue-50" />
           <StatCard title="Groups" value={stats.totalGroups} icon={Users} colorClass="bg-purple-100 text-purple-600" bgColor="bg-purple-50" />
-          <StatCard title="Pending Approvals" value={stats.pendingApprovals} icon={AlertCircle} colorClass="bg-red-100 text-red-600" bgColor="bg-red-50" />
-          <StatCard title="Today's Check-ins" value={stats.todayAttendances} icon={CalendarCheck} colorClass="bg-green-100 text-green-600" bgColor="bg-green-50" />
+          <StatCard title="Pending" value={stats.pendingApprovals} icon={AlertCircle} colorClass="bg-red-100 text-red-600" bgColor="bg-red-50" />
+          <StatCard title="Check-ins" value={stats.todayAttendances} icon={CalendarCheck} colorClass="bg-green-100 text-green-600" bgColor="bg-green-50" />
         </div>
 
         {/* Podium — Top 3 */}
@@ -295,7 +387,7 @@ const AdminDashboard = () => {
               <Trophy className="w-6 h-6 text-yellow-500" />
               <h2 className="text-xl font-extrabold text-gray-900">Top Performers</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-stretch">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-14 sm:gap-6 items-stretch mt-8 sm:mt-0">
               {stats.topPerformers[0] && <PodiumCard user={stats.topPerformers[0]} index={0} onViewDetails={setSelectedEmployee} />}
               {stats.topPerformers[1] && <PodiumCard user={stats.topPerformers[1]} index={1} onViewDetails={setSelectedEmployee} />}
               {stats.topPerformers[2] && <PodiumCard user={stats.topPerformers[2]} index={2} onViewDetails={setSelectedEmployee} />}
@@ -324,8 +416,8 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full whitespace-nowrap text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider">
@@ -364,9 +456,13 @@ const AdminDashboard = () => {
 
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold shadow-sm
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold shadow-sm overflow-hidden
                               ${isTop3 ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                              {initials}
+                              {emp.profilePicture ? (
+                                <img src={emp.profilePicture} alt={emp.name} className="w-full h-full object-cover" />
+                              ) : (
+                                initials
+                              )}
                             </div>
                             <div>
                               <p className="font-bold text-gray-800 group-hover:text-indigo-700 transition-colors">{emp.name}</p>
@@ -423,6 +519,48 @@ const AdminDashboard = () => {
               </table>
             </div>
 
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-gray-50">
+              {pagedLeaderboard.length === 0 ? (
+                <div className="px-6 py-16 text-center text-gray-400">
+                  <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="font-medium">No employees match your search</p>
+                </div>
+              ) : pagedLeaderboard.map((emp) => {
+                const initials = emp.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                return (
+                  <div key={emp._id} className="p-4 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 overflow-hidden">
+                          {emp.profilePicture ? <img src={emp.profilePicture} className="w-full h-full object-cover" /> : initials}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm leading-tight">{emp.name}</p>
+                          <p className="text-[11px] text-gray-500 font-medium">Rank #{emp.rank}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-indigo-600 tabular-nums">{emp.performanceScore} pts</p>
+                        <div className={`flex items-center justify-end gap-1 text-[10px] font-bold ${emp.trend > 0 ? 'text-emerald-500' : emp.trend < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                           {emp.trend > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : emp.trend < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : null}
+                           {emp.trend > 0 ? '+' : ''}{emp.trend}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <button onClick={() => setSelectedEmployee(emp)} className="flex-1 py-2 bg-indigo-50 text-indigo-600 text-[11px] font-bold rounded-xl border border-indigo-100 flex items-center justify-center gap-1.5">
+                         <BarChart2 className="w-3.5 h-3.5" /> Stats
+                       </button>
+                       <button onClick={() => setFeedbackFor(emp._id)} className="flex-1 py-2 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center justify-center gap-1.5">
+                         <MessageSquarePlus className="w-3.5 h-3.5" /> Feedback
+                       </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Pagination Footer */}
             <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-gray-500 font-medium">
@@ -466,7 +604,13 @@ const AdminDashboard = () => {
 
       {/* Modals */}
       <EmployeeModal employee={selectedEmployee} onClose={() => setSelectedEmployee(null)} />
-      {feedbackFor && <FeedbackModal employeeId={feedbackFor} onClose={() => setFeedbackFor(null)} />}
+      {feedbackFor && (
+        <FeedbackModal
+          employeeId={feedbackFor}
+          onClose={() => setFeedbackFor(null)}
+          onSuccess={fetchStats}
+        />
+      )}
     </>
   );
 };

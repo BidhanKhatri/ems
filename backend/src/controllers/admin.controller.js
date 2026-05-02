@@ -44,7 +44,7 @@ export const submitEmployeeFeedback = catchAsync(async (req, res) => {
   const { id } = req.params;
   const adminId = req.user.id;
   const { text, points } = req.body;
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  const imageUrl = req.file ? req.file.path : null;
 
   const result = await adminService.processFeedback(id, adminId, { text, points: Number(points || 0), imageUrl });
   res.status(200).send({
@@ -53,10 +53,37 @@ export const submitEmployeeFeedback = catchAsync(async (req, res) => {
   });
 });
 
+export const getEmployeeAttendance = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { startDate, endDate, page = 1, limit = 20 } = req.query;
+
+  const filter = { userId: id };
+  if (startDate) filter.date = { ...filter.date, $gte: startDate };
+  if (endDate) filter.date = { ...filter.date, $lte: endDate };
+
+  const skip = (page - 1) * limit;
+  const [records, total] = await Promise.all([
+    (await import('../models/Attendance.js')).default
+      .find(filter)
+      .sort({ date: -1, checkInTime: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    (await import('../models/Attendance.js')).default.countDocuments(filter),
+  ]);
+
+  res.status(200).send({
+    records,
+    total,
+    totalPages: Math.ceil(total / limit),
+    currentPage: Number(page),
+  });
+});
+
 export const getEmployeeLeaderboard = catchAsync(async (req, res) => {
   const requestingUserId = req.user.id;
   
-  const users = await User.find({ role: 'EMPLOYEE', isActive: true })
+  const users = await User.find({ role: 'EMPLOYEE', isActive: true, approvalStatus: 'APPROVED' })
     .select('name performanceScore totalPoints')
     .sort({ performanceScore: -1 })
     .lean();
@@ -81,4 +108,19 @@ export const getEmployeeLeaderboard = catchAsync(async (req, res) => {
   const selfEntry = leaderboard.find(e => e.isSelf);
 
   res.status(200).send({ leaderboard, selfRank: selfEntry?.rank ?? null });
+});
+
+export const getAccountApprovals = catchAsync(async (req, res) => {
+  const result = await adminService.getAccountApprovals(req.query);
+  res.status(200).send(result);
+});
+
+export const updateAccountApprovalStatus = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const user = await adminService.updateAccountApprovalStatus(id, status);
+  res.status(200).send({
+    message: `User account ${status.toLowerCase()} successfully`,
+    user
+  });
 });

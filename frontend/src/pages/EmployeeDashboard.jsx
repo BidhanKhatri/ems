@@ -3,7 +3,7 @@ import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import { toast } from 'sonner';
 import { Clock, Star, Trophy, Activity, Calendar, CheckCircle2, XCircle, AlertCircle, Zap, LogIn, LogOut, TrendingUp, TrendingDown, Crown } from 'lucide-react';
-import { formatTime } from '../utils/formatDate';
+import { formatTime, formatSimpleTime } from '../utils/formatDate';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SlideButton from '../components/SlideButton';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, isValid } from 'date-fns';
@@ -11,11 +11,12 @@ import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, sta
 let lastDevInitAt = 0;
 
 const EmployeeDashboard = () => {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [todayStatus, setTodayStatus] = useState({ isHoliday: false, message: '' });
   const [settings, setSettings] = useState(null);
+  const [showEarlyModal, setShowEarlyModal] = useState(false);
 
   // Performance Analytics
   const [performanceLogs, setPerformanceLogs] = useState([]);
@@ -35,7 +36,17 @@ const EmployeeDashboard = () => {
     fetchTodayData();
     fetchPerformanceData();
     fetchLeaderboard();
+    fetchLatestProfile();
   }, []);
+
+  const fetchLatestProfile = async () => {
+    try {
+      const { data } = await api.get('/users/profile');
+      if (data) setUser(data);
+    } catch (error) {
+      console.error('Failed to sync profile', error);
+    }
+  };
 
   const fetchTodayData = async () => {
     try {
@@ -49,7 +60,7 @@ const EmployeeDashboard = () => {
       if (!statusRes.data.isHoliday) {
         const { data } = await api.get('/attendance/me');
         if (!Array.isArray(data)) { setTodayAttendance(null); return; }
-        const todayString = new Date().toISOString().split('T')[0];
+        const todayString = format(new Date(), 'yyyy-MM-dd');
         const todayRecord = data.find((r) => r.date === todayString);
         setTodayAttendance(todayRecord);
       }
@@ -115,6 +126,15 @@ const EmployeeDashboard = () => {
   const attendanceStatus = todayAttendance?.status || 'ON_TIME';
   const pointsAwarded = Number(todayAttendance?.pointsAwarded || 0);
 
+  const isCheckOutTimeCrossed = useMemo(() => {
+    if (!settings?.checkOutTime || todayAttendance) return false;
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const [outH, outM] = settings.checkOutTime.split(':').map(Number);
+    const outMins = outH * 60 + outM;
+    return currentMins > outMins;
+  }, [settings, todayAttendance]);
+
   const handleCheckIn = async () => {
     setLoading(true);
     try {
@@ -128,16 +148,19 @@ const EmployeeDashboard = () => {
     }
   };
 
-  const handleCheckOut = async () => {
-    if (settings?.checkOutTime) {
+  const handleCheckOut = async (bypass = false) => {
+    if (!bypass && settings?.checkOutTime) {
       const now = new Date();
       const currentMins = now.getHours() * 60 + now.getMinutes();
       const [targetH, targetM] = settings.checkOutTime.split(':').map(Number);
       const targetMins = targetH * 60 + targetM;
       if (currentMins < targetMins) {
-        if (!window.confirm('You are attempting to check out before the official check-out time. Continue anyway?')) return;
+        setShowEarlyModal(true);
+        return;
       }
     }
+    
+    setShowEarlyModal(false);
     setLoading(true);
     try {
       const { data } = await api.post('/attendance/check-out');
@@ -150,39 +173,50 @@ const EmployeeDashboard = () => {
     }
   };
 
-  const renderProgressBar = () => {
-    if (!settings || !todayAttendance || todayAttendance.checkOutTime) return null;
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    let startMins = 9 * 60;
-    let endMins = 17 * 60;
-    if (settings) {
-      const [inH, inM] = settings.checkInTime.split(':').map(Number);
-      startMins = inH * 60 + inM;
-      const [outH, outM] = settings.checkOutTime.split(':').map(Number);
-      endMins = outH * 60 + outM;
-    }
-    const totalDuration = endMins - startMins;
-    if (!Number.isFinite(totalDuration) || totalDuration <= 0) return null;
-    const elapsed = Math.max(0, currentMins - startMins);
-    let percentage = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
-    if (!Number.isFinite(percentage)) percentage = 0;
-    let barColor = 'bg-red-500';
-    if (percentage >= 33 && percentage < 66) barColor = 'bg-yellow-500';
-    else if (percentage >= 66) barColor = 'bg-green-500';
-    return (
-      <div className="w-full mt-4 bg-[#F2EFE9] p-4 border border-stone-200 rounded-xl select-none pointer-events-none">
-        <div className="flex justify-between text-xs font-semibold text-stone-600 mb-2">
-          <span>Check In: {settings.checkInTime}</span>
-          <span>Time Elapsed: {Math.round(percentage)}%</span>
-          <span>Check Out: {settings.checkOutTime}</span>
-        </div>
-        <div className="w-full bg-stone-200 rounded-full h-3.5 mb-2 overflow-hidden shadow-inner">
-          <div className={`${barColor} h-3.5 rounded-full transition-all duration-1000 ease-out`} style={{ width: `${percentage}%` }} />
-        </div>
+const WorkProgressBar = ({ settings, todayAttendance }) => {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 10000); // Update every 10 seconds
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!settings || !todayAttendance || todayAttendance.checkOutTime) return null;
+
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  const [inH, inM] = settings.checkInTime.split(':').map(Number);
+  const startMins = inH * 60 + inM;
+  const [outH, outM] = settings.checkOutTime.split(':').map(Number);
+  const endMins = outH * 60 + outM;
+
+  const totalDuration = endMins - startMins;
+  if (!Number.isFinite(totalDuration) || totalDuration <= 0) return null;
+
+  const elapsed = Math.max(0, currentMins - startMins);
+  let percentage = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+  if (!Number.isFinite(percentage)) percentage = 0;
+
+  let barColor = 'bg-red-500';
+  if (percentage >= 33 && percentage < 66) barColor = 'bg-yellow-500';
+  else if (percentage >= 66) barColor = 'bg-green-500';
+
+  return (
+    <div className="w-full mt-4 bg-[#F2EFE9] p-4 border border-stone-200 rounded-xl select-none pointer-events-none">
+      <div className="flex justify-between text-xs font-semibold text-stone-600 mb-2">
+        <span>Check In: {formatSimpleTime(settings.checkInTime)}</span>
+        <span>Progress: {Math.round(percentage)}%</span>
+        <span>Check Out: {formatSimpleTime(settings.checkOutTime)}</span>
       </div>
-    );
-  };
+      <div className="w-full bg-stone-200 rounded-full h-3.5 mb-2 overflow-hidden shadow-inner">
+        <div
+          className={`${barColor} h-3.5 rounded-full transition-all linear`}
+          style={{ width: `${percentage}%`, transitionDuration: '10000ms' }}
+        />
+      </div>
+      <p className="text-[10px] text-stone-400 font-medium text-center italic mt-1">Updates live every 10 seconds</p>
+    </div>
+  );
+};
 
   return (
     <div className="space-y-6 pb-10">
@@ -198,8 +232,8 @@ const EmployeeDashboard = () => {
           {/* User Info & Avatar Group */}
           <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
             <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm overflow-hidden">
-              {user?.avatar ? (
-                <img src={user.avatar} className="w-full h-full object-cover" alt="User" />
+              {user?.profilePicture ? (
+                <img src={user.profilePicture} className="w-full h-full object-cover" alt="User" />
               ) : (
                 <span className="text-amber-800 font-black text-lg sm:text-xl">{user?.name?.charAt(0)?.toUpperCase()}</span>
               )}
@@ -235,11 +269,13 @@ const EmployeeDashboard = () => {
       {/* ── 2-col grid: Time Tracking | Team Leaderboard ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Check-In Card */}
-        <div className="bg-[#FAF8F5] p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mb-4 shadow-inner border border-amber-200/50">
-            <Clock className="w-8 h-8" />
+        <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col items-center justify-center text-center">
+          <div className="flex flex-row items-center gap-3 sm:flex-col sm:mb-4">
+            <div className="w-10 h-10 sm:w-16 sm:h-16 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center shadow-inner border border-amber-200/50">
+              <Clock className="w-5 h-5 sm:w-8 sm:h-8" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-black text-stone-800 tracking-tight">Attendance Management</h3>
           </div>
-          <h3 className="text-xl font-bold text-stone-800 mb-2">Time Tracking</h3>
 
           {todayStatus.isHoliday ? (
             <div className="mt-4 bg-orange-50 border border-orange-200 text-orange-800 p-6 rounded-xl w-full">
@@ -249,10 +285,33 @@ const EmployeeDashboard = () => {
             </div>
           ) : !todayAttendance ? (
             <div className="w-full">
-              <p className="text-sm text-stone-500 mb-4 font-medium select-none pointer-events-none">Standard Check-In: <span className="text-stone-800 font-bold">{settings?.checkInTime}</span></p>
-              <div className="w-full max-w-sm mx-auto">
-                <SlideButton text="Slide to Check In" onSlide={handleCheckIn} disabled={loading} color="primary" />
-              </div>
+              {isCheckOutTimeCrossed ? (
+                <div className="mt-2 p-8 bg-red-50/40 border border-dashed border-red-200 rounded-3xl">
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="bg-red-100 p-3 rounded-2xl shadow-sm border border-red-200">
+                      <LogOut className="w-10 h-10 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-red-900 tracking-tight text-lg">Shift Ended</h4>
+                      <p className="text-xs text-red-700/80 font-semibold mt-2 max-w-[260px] leading-relaxed">
+                        The check-out time (<span className="text-red-900 font-bold">{formatSimpleTime(settings?.checkOutTime)}</span>) has already passed. 
+                        You cannot check in for today.
+                      </p>
+                      <div className="mt-4 inline-flex items-center gap-2 bg-red-100/50 px-3 py-1.5 rounded-full border border-red-200">
+                        <AlertCircle className="w-3 h-3 text-red-600" />
+                        <span className="text-[10px] font-bold text-red-800 uppercase tracking-wider">Access Closed</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-stone-500 mb-4 font-medium select-none pointer-events-none">Standard Check-In: <span className="text-stone-800 font-bold">{formatSimpleTime(settings?.checkInTime)}</span></p>
+                  <div className="w-full max-w-sm mx-auto">
+                    <SlideButton text="Slide to Check In" onSlide={handleCheckIn} disabled={loading} color="primary" />
+                  </div>
+                </>
+              )}
             </div>
           ) : todayAttendance.checkOutTime ? (
             <div className="bg-stone-200 text-stone-700 px-6 py-4 rounded-xl font-bold w-full uppercase tracking-wider text-sm shadow-inner border border-stone-300 select-none pointer-events-none">
@@ -298,7 +357,7 @@ const EmployeeDashboard = () => {
                 </div>
               ) : (
                 <div className="w-full">
-                  {renderProgressBar()}
+                  <WorkProgressBar settings={settings} todayAttendance={todayAttendance} />
                   <div className="mt-6 w-full max-w-sm mx-auto">
                     <SlideButton text="Slide to Check Out" onSlide={handleCheckOut} disabled={loading} color="dark" />
                   </div>
@@ -464,7 +523,7 @@ const EmployeeDashboard = () => {
         ) : todayAttendance ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Status */}
-            <div className="flex flex-col gap-2 p-3 bg-[#FCFBF8] rounded-xl border border-stone-200">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 p-3 bg-[#FCFBF8] rounded-xl border border-stone-200">
               <div className="flex items-center gap-2">
                 {attendanceStatus === 'EARLY' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> :
                   attendanceStatus === 'LATE' || attendanceStatus === 'LATE_REJECTED' ? <XCircle className="w-4 h-4 text-red-600" /> :
@@ -472,35 +531,37 @@ const EmployeeDashboard = () => {
                       <CheckCircle2 className="w-4 h-4 text-stone-600" />}
                 <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Status</span>
               </div>
-              <span className={`self-start px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
                 ${attendanceStatus === 'EARLY' ? 'bg-green-100 text-green-700' : ''}
                 ${attendanceStatus === 'LATE' ? 'bg-yellow-100 text-yellow-700' : ''}
                 ${attendanceStatus === 'PENDING_APPROVAL' ? 'bg-amber-100 text-amber-700' : ''}
                 ${attendanceStatus === 'LATE_APPROVED' ? 'bg-orange-100 text-orange-700' : ''}
                 ${attendanceStatus === 'LATE_REJECTED' ? 'bg-red-100 text-red-700' : ''}
                 ${attendanceStatus === 'ON_TIME' ? 'bg-stone-100 text-stone-600' : ''}
+                ${attendanceStatus === 'MISSED' ? 'bg-red-600 text-white' : ''}
               `}>
                 {attendanceStatus === 'LATE_APPROVED' ? 'Late · Approved' :
                   attendanceStatus === 'LATE_REJECTED' ? 'Late · Rejected' :
                     attendanceStatus === 'PENDING_APPROVAL' ? 'Pending' :
-                      attendanceStatus.charAt(0) + attendanceStatus.slice(1).toLowerCase()}
+                      attendanceStatus === 'MISSED' ? 'Missed' :
+                        attendanceStatus.charAt(0) + attendanceStatus.slice(1).toLowerCase()}
               </span>
             </div>
 
             {/* Check-in */}
-            <div className="flex flex-col gap-2 p-3 bg-[#FCFBF8] rounded-xl border border-stone-200 select-none pointer-events-none">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 p-3 bg-[#FCFBF8] rounded-xl border border-stone-200 select-none pointer-events-none">
               <div className="flex items-center gap-2">
                 <LogIn className="w-4 h-4 text-amber-700" />
-                <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Checked In</span>
+                <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">In</span>
               </div>
               <span className="text-sm font-bold text-stone-800">{formatTime(todayAttendance.checkInTime)}</span>
             </div>
 
             {/* Check-out */}
-            <div className="flex flex-col gap-2 p-3 bg-[#FCFBF8] rounded-xl border border-stone-200 select-none pointer-events-none">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 p-3 bg-[#FCFBF8] rounded-xl border border-stone-200 select-none pointer-events-none">
               <div className="flex items-center gap-2">
                 <LogOut className="w-4 h-4 text-stone-400" />
-                <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Checked Out</span>
+                <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Out</span>
               </div>
               <span className="text-sm font-bold text-stone-800">
                 {todayAttendance.checkOutTime ? formatTime(todayAttendance.checkOutTime) : '—'}
@@ -508,7 +569,7 @@ const EmployeeDashboard = () => {
             </div>
 
             {/* Points */}
-            <div className={`flex flex-col gap-2 p-3 rounded-xl border ${pointsAwarded >= 0 ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+            <div className={`flex flex-col xs:flex-row xs:items-center justify-between gap-2 p-3 rounded-xl border ${pointsAwarded >= 0 ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
               <div className="flex items-center gap-2">
                 {pointsAwarded >= 0
                   ? <TrendingUp className="w-4 h-4 text-green-500" />
@@ -528,6 +589,36 @@ const EmployeeDashboard = () => {
           </div>
         )}
       </div>
+      {/* Early Check-out Modal */}
+      {showEarlyModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-stone-900/20">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-stone-100 animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-6 mx-auto">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-stone-800 text-center tracking-tight">Early Check-out?</h2>
+            <p className="text-stone-500 text-sm text-center mt-3 leading-relaxed font-medium">
+              You are attempting to check out before the official time (<span className="text-stone-800 font-bold">{formatSimpleTime(settings?.checkOutTime)}</span>).
+              This might affect your performance score.
+            </p>
+            <div className="flex flex-col gap-3 mt-8">
+              <button
+                onClick={() => handleCheckOut(true)}
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-2xl bg-stone-800 text-white font-bold text-sm hover:bg-stone-900 shadow-lg shadow-stone-200 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {loading ? 'Processing...' : 'Confirm Early Check-out'}
+              </button>
+              <button
+                onClick={() => setShowEarlyModal(false)}
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

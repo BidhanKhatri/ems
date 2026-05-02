@@ -1,10 +1,30 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
+const checkTokenValid = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return false;
+  }
+};
+
+const isValidToken = checkTokenValid();
+
 const useAuthStore = create((set) => ({
-  user: JSON.parse(localStorage.getItem('user')) || null,
-  token: localStorage.getItem('token') || null,
-  isAuthenticated: !!localStorage.getItem('token'),
+  user: isValidToken ? JSON.parse(localStorage.getItem('user')) : null,
+  token: isValidToken ? localStorage.getItem('token') : null,
+  isAuthenticated: isValidToken,
 
   setUser: (user) => {
     localStorage.setItem('user', JSON.stringify(user));

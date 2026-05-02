@@ -1,6 +1,10 @@
 import cron from 'node-cron';
 import User from '../models/User.js';
+import Attendance from '../models/Attendance.js';
+import SystemSettings from '../models/SystemSettings.js';
+import Holiday from '../models/Holiday.js';
 import { processOverdueActivitySessions } from '../services/activity.service.js';
+import { subDays, startOfDay, endOfDay, isWeekend } from 'date-fns';
 
 // Run at 23:59 on the last day of the month
 const initCronJobs = () => {
@@ -10,6 +14,47 @@ const initCronJobs = () => {
       await processOverdueActivitySessions();
     } catch (error) {
       console.error('Failed to run activity monitor job', error);
+    }
+  });
+
+  cron.schedule('5 0 * * *', async () => {
+    try {
+      const yesterday = subDays(new Date(), 1);
+      const dateStr = yesterday.toISOString().split('T')[0];
+      const settings = await SystemSettings.findOne();
+
+      // 1. Skip if weekend disabled
+      if (settings?.disableWeekends && isWeekend(yesterday)) return;
+
+      // 2. Skip if holiday
+      const isHoliday = await Holiday.findOne({
+        startDate: { $lte: endOfDay(yesterday) },
+        endDate: { $gte: startOfDay(yesterday) }
+      });
+      if (isHoliday) return;
+
+      // 3. Find all employees
+      const employees = await User.find({ role: 'EMPLOYEE', isActive: true });
+
+      for (const employee of employees) {
+        // 4. Check if attendance exists
+        const attendance = await Attendance.findOne({ userId: employee._id, date: dateStr });
+
+        if (!attendance) {
+          // Create missed record
+          await Attendance.create({
+            userId: employee._id,
+            date: dateStr,
+            checkInTime: startOfDay(yesterday),
+            checkOutTime: endOfDay(yesterday),
+            status: 'MISSED',
+            pointsAwarded: 0
+          });
+          console.log(`[Job] Marked MISSED for ${employee.name} on ${dateStr}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to run missed attendance job', error);
     }
   });
 

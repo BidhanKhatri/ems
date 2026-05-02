@@ -17,10 +17,6 @@ const Settings = () => {
     earlyMargin: 5,
     lateMargin: 5,
     disableWeekends: true,
-    activitySessionMinutes: 0,
-    activityGraceMinutes: 5,
-    activityMissPenaltyPoints: 8,
-    adminWhatsAppNumber: '',
     smtpUser: '',
     smtpPass: '',
     smtpHost: 'smtp.gmail.com',
@@ -143,8 +139,8 @@ const Settings = () => {
             </div>
           ) : (
             <form onSubmit={handleSaveSettings} className="space-y-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Column 1: Core Attendance Rules */}
+              <div className="space-y-6">
+                {/* Attendance Rules */}
                 <div className="space-y-6">
                   <div className="pb-2 border-b border-gray-100 flex items-center">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mr-3">
@@ -218,77 +214,6 @@ const Settings = () => {
                     <label htmlFor="weekends" className="text-sm font-medium text-gray-700">
                       Automatically Block Weekends
                     </label>
-                  </div>
-                </div>
-
-                {/* Column 2: Employee Activity Tracking */}
-                <div className="space-y-6 lg:border-l lg:border-gray-100 lg:pl-10">
-                  <div className="pb-2 border-b border-gray-100 flex items-center">
-                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center mr-3">
-                      <CalendarIcon className="w-4 h-4 text-orange-500" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">Activity Tracking</h3>
-                  </div>
-
-                  <p className="text-sm text-gray-500 leading-relaxed italic">
-                    Require employees to periodically confirm they are active during work hours.
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Session Duration</label>
-                      <select
-                        value={settings.activitySessionMinutes || 0}
-                        onChange={(e) => setSettings({ ...settings, activitySessionMinutes: Number(e.target.value) })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      >
-                        <option value={0}>Disabled</option>
-                        <option value={1}>1 Minute (Test)</option>
-                        <option value={30}>30 Minutes</option>
-                        <option value={60}>1 Hour</option>
-                        <option value={120}>2 Hours</option>
-                        <option value={180}>3 Hours</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center">
-                        Grace Window <span className="text-[10px] text-gray-400 font-normal ml-1">(mins)</span>
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={settings.activityGraceMinutes || 0}
-                        onChange={(e) => setSettings({ ...settings, activityGraceMinutes: Number(e.target.value) })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Miss Penalty</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={settings.activityMissPenaltyPoints || 8}
-                        onChange={(e) => setSettings({ ...settings, activityMissPenaltyPoints: Number(e.target.value) })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      />
-                      <p className="text-[11px] text-gray-400 mt-1.5 leading-tight">Points deducted from performance for missed checks.</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Admin WhatsApp</label>
-                      <input
-                        type="text"
-                        placeholder="+15551234567"
-                        value={settings.adminWhatsAppNumber || ''}
-                        onChange={(e) => setSettings({ ...settings, adminWhatsAppNumber: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      />
-                      <p className="text-[11px] text-gray-400 mt-1.5 leading-tight">Used for automated alerts on missed activity.</p>
-                    </div>
                   </div>
                 </div>
               </div>

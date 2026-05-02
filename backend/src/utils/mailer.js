@@ -8,7 +8,7 @@ export const sendEmail = async ({ to, subject, html }) => {
   try {
     // Fetch latest SMTP settings from DB
     const settings = await SystemSettings.findOne();
-    
+
     const smtpHost = settings?.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = settings?.smtpPort || process.env.SMTP_PORT || 465;
     const smtpUser = settings?.smtpUser || process.env.SMTP_USER;
@@ -38,7 +38,7 @@ export const sendEmail = async ({ to, subject, html }) => {
       subject,
       html,
     });
-    
+
     console.log('Email sent: %s', info.messageId);
     return info;
   } catch (error) {

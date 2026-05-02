@@ -31,7 +31,7 @@ export const registerUser = async (userData) => {
   });
 
   // Send OTP via Email
-  const subject = 'Verify Your Account - EMS';
+  const subject = 'Verify Your Account - Staffingbetit';
   const html = `
     <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
       <h2 style="color: #4f46e5; text-align: center;">Verify Your Email</h2>
@@ -116,7 +116,7 @@ export const resendOTP = async (email) => {
   await user.save();
 
   // Send OTP via Email
-  const subject = 'New OTP for Verification - EMS';
+  const subject = 'New OTP for Verification - Staffingbetit';
   const html = `
     <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
       <h2 style="color: #4f46e5; text-align: center;">New Verification Code</h2>
@@ -152,7 +152,7 @@ export const forgotPassword = async (email) => {
   await user.save();
 
   // Send Reset OTP via Email
-  const subject = 'Password Reset Code - EMS';
+  const subject = 'Password Reset Code - Staffingbetit';
   const html = `
     <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
       <h2 style="color: #4f46e5; text-align: center;">Reset Your Password</h2>
@@ -234,6 +234,10 @@ export const updateUserProfile = async (userId, updates) => {
 
   if (updates.name) {
     user.name = updates.name;
+  }
+
+  if (updates.profilePicture) {
+    user.profilePicture = updates.profilePicture;
   }
 
   await user.save();

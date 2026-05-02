@@ -19,6 +19,15 @@ const userSchema = new mongoose.Schema(
     lastActivityMarkAt: { type: Date, default: null },
     nextActivityDueAt: { type: Date, default: null },
     lastActivityPromptAt: { type: Date, default: null },
+    profilePicture: { type: String, default: null },
+    cloudinaryId: { type: String, default: null },
+    approvalStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      default: function () {
+        return this.role === 'ADMIN' ? 'APPROVED' : 'PENDING';
+      }
+    },
   },
   { timestamps: true }
 );

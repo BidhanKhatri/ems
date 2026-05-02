@@ -1,8 +1,12 @@
 import express from 'express';
-import { getDashboard, getApprovals, approveRequest, getUsers, removeUser, toggleUserStatus } from '../controllers/admin.controller.js';
+import {
+  getDashboard, getApprovals, approveRequest,
+  getUsers, removeUser, toggleUserStatus,
+  submitEmployeeFeedback, getEmployeeAttendance,
+  getAccountApprovals, updateAccountApprovalStatus
+} from '../controllers/admin.controller.js';
 import { requireAuth, requireRole } from '../middlewares/auth.middleware.js';
-import { submitEmployeeFeedback } from '../controllers/admin.controller.js';
-import { upload } from '../middlewares/upload.middleware.js';
+import { upload } from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -18,5 +22,10 @@ router.get('/users', getUsers);
 router.delete('/users/:id', removeUser);
 router.patch('/users/:id/status', toggleUserStatus);
 router.post('/users/:id/feedback', upload.single('image'), submitEmployeeFeedback);
+router.get('/users/:id/attendance', getEmployeeAttendance);
+
+// Account Approvals
+router.get('/account-approvals', getAccountApprovals);
+router.patch('/account-approvals/:id', updateAccountApprovalStatus);
 
 export default router;

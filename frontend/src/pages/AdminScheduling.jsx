@@ -117,22 +117,22 @@ const AdminScheduling = () => {
     if (!selectedEmployee) {
       return toast.warning('Please select an employee first');
     }
-    
+
     // We treat arg.dateStr as the display time (since calendar maps local inputs to ISO)
     const displayIsoStr = arg.dateStr.includes('T') ? arg.dateStr : `${arg.dateStr}T09:00:00`;
-    
+
     // For defaults, let's keep the modal date/time purely in Display Space (what the admin sees)
     const timePart = displayIsoStr.split('T')[1].substring(0, 5);
     setModalDate(displayIsoStr.split('T')[0]);
     setModalStartTime(timePart);
-    
+
     // Auto-detect end time: 1 hour after the clicked time
     const [h, m] = timePart.split(':');
     const endHour = (parseInt(h, 10) + 1).toString().padStart(2, '0');
     const finalEndHour = parseInt(endHour, 10) > 23 ? '23' : endHour;
     const finalEndMinute = parseInt(endHour, 10) > 23 ? '59' : m;
     setModalEndTime(`${finalEndHour}:${finalEndMinute}`);
-    
+
     setCurrentEvent(null);
     setModalTitle('Regular Shift');
     setIsModalOpen(true);
@@ -141,7 +141,7 @@ const AdminScheduling = () => {
   const handleEventClick = (arg) => {
     const event = arg.event;
     setCurrentEvent(event.id);
-    
+
     // Convert Date objects to ISO strings matching local display
     const startIso = format(event.start, "yyyy-MM-dd'T'HH:mm:ss");
     const endIso = event.end ? format(event.end, "yyyy-MM-dd'T'HH:mm:ss") : startIso;
@@ -159,10 +159,10 @@ const AdminScheduling = () => {
     try {
       const startIso = format(event.start, "yyyy-MM-dd'T'HH:mm:ss");
       const endIso = event.end ? format(event.end, "yyyy-MM-dd'T'HH:mm:ss") : format(event.start, "yyyy-MM-dd'T'HH:mm:ss");
-      
+
       const dbStart = displayStringToDb(startIso);
       const dbEnd = displayStringToDb(endIso);
-      
+
       await updateSchedule(event.id, {
         date: dbStart.date,
         startTime: dbStart.time,
@@ -182,7 +182,7 @@ const AdminScheduling = () => {
     try {
       const startDisplayIso = `${modalDate}T${modalStartTime}:00`;
       const endDisplayIso = `${modalDate}T${modalEndTime}:00`;
-      
+
       const dbStart = displayStringToDb(startDisplayIso);
       const dbEnd = displayStringToDb(endDisplayIso);
 
@@ -245,64 +245,106 @@ const AdminScheduling = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Area */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Employee Scheduling</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage shifts and work hours for your team</p>
-        </div>
+    <div className="space-y-4 sm:space-y-6 pb-10">
+      {/* Ultra-Compact Unified Header Toolbar */}
+      <div className="bg-white p-3 sm:p-2 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-3">
+        <div className="flex items-center justify-between w-full lg:w-auto">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-indigo-50">
+               <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <h1 className="text-[12px] font-black text-gray-900 leading-none">Shifts</h1>
+              <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none mt-1">Management</p>
+            </div>
+          </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          {/* Timezone Toggle */}
-          <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-sm">
+          {/* Timezone (Mobile Top Right) */}
+          <div className="flex items-center bg-gray-50 border border-gray-200 rounded-md p-0.5 shadow-sm sm:hidden">
             <button
               onClick={() => setViewTimezone('NPT')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewTimezone === 'NPT' ? 'bg-white text-indigo-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-2 py-1 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider transition-all ${viewTimezone === 'NPT' ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' : 'text-gray-400'}`}
             >
-              <Globe className="w-3.5 h-3.5" />
-              Nepal Time
+              NPT
             </button>
             <button
               onClick={() => setViewTimezone('US')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewTimezone === 'US' ? 'bg-white text-indigo-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-2 py-1 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider transition-all ${viewTimezone === 'US' ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' : 'text-gray-400'}`}
             >
-              <Globe className="w-3.5 h-3.5" />
-              US Time (EST)
+              EST
+            </button>
+          </div>
+        </div>
+
+        {/* Controls Row */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
+          <div className="hidden sm:flex items-center bg-gray-50 border border-gray-200 rounded-md p-0.5 shadow-sm">
+            <button
+              onClick={() => setViewTimezone('NPT')}
+              className={`px-2 py-1 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider transition-all ${viewTimezone === 'NPT' ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              NPT
+            </button>
+            <button
+              onClick={() => setViewTimezone('US')}
+              className={`px-2 py-1 rounded-[4px] text-[7.5px] font-black uppercase tracking-wider transition-all ${viewTimezone === 'US' ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              EST
             </button>
           </div>
 
-          <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2">
-            <Users className="w-4 h-4 text-gray-400 mr-2" />
+          <div className="flex-1 min-w-[120px] sm:flex-none flex items-center bg-white border border-gray-200 rounded-md px-2 py-1.5 shadow-sm">
+            <Users className="w-3.5 h-3.5 text-gray-400 mr-2" />
             <select
               value={selectedEmployee}
               onChange={(e) => setSelectedEmployee(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 min-w-[200px]"
+              className="bg-transparent border-none outline-none text-[10px] font-bold text-gray-700 w-full uppercase tracking-wider"
             >
-              <option value="" disabled>Select an employee</option>
+              <option value="" disabled>Select Employee</option>
               {employees.map(emp => (
                 <option key={emp._id} value={emp._id}>{emp.name}</option>
               ))}
             </select>
           </div>
 
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1.5 shadow-sm">
-            <input
-              type="date"
-              value={copyDate}
-              onChange={(e) => setCopyDate(e.target.value)}
-              className="text-sm border-none outline-none px-2 py-1 text-gray-600 bg-gray-50 rounded-lg"
-              title="Select Day 1 Date"
-            />
-            <button
-              onClick={handleCopyWeek}
-              disabled={isCopying || !copyDate}
-              className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
-            >
-              <Copy className="w-4 h-4" />
-              {isCopying ? 'Copying...' : 'Copy to Week'}
-            </button>
-          </div>
+          {selectedEmployee && (
+            <div className="flex items-center gap-2 pl-2 sm:pl-3 sm:border-l border-gray-100 shrink-0">
+              <div className="w-8 h-8 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 overflow-hidden shadow-sm">
+                 {employees.find(e => e._id === selectedEmployee)?.profilePicture ? (
+                   <img src={employees.find(e => e._id === selectedEmployee).profilePicture} className="w-full h-full object-cover" />
+                 ) : (
+                   employees.find(e => e._id === selectedEmployee)?.name?.[0]
+                 )}
+              </div>
+              <div className="flex flex-col min-w-0">
+               <h2 className="text-[10px] font-black text-gray-900 leading-none mb-1 truncate max-w-[100px] sm:max-w-[150px]">
+                 {employees.find(e => e._id === selectedEmployee)?.name}
+               </h2>
+               <p className="text-[8px] text-indigo-500 font-bold leading-none truncate max-w-[100px] sm:max-w-[150px]">
+                 {employees.find(e => e._id === selectedEmployee)?.email?.toLowerCase()}
+               </p>
+            </div>
+            </div>
+          )}
+
+          {selectedEmployee && (
+            <div className="flex items-center gap-1 ml-auto sm:ml-0 bg-gray-50/50 p-1 rounded-md border border-gray-200 shrink-0">
+              <input
+                type="date"
+                value={copyDate}
+                onChange={(e) => setCopyDate(e.target.value)}
+                className="text-[9px] font-bold border-none outline-none px-2 py-1.5 text-gray-600 bg-white rounded-md uppercase tracking-wider shadow-sm w-24"
+              />
+              <button
+                onClick={handleCopyWeek}
+                disabled={isCopying || !copyDate}
+                className="flex items-center gap-1 bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-md"
+              >
+                <Copy className="w-3 h-3" />
+                COPY
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -318,7 +360,7 @@ const AdminScheduling = () => {
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
+              initialView={window.innerWidth < 768 ? 'timeGridDay' : 'timeGridWeek'}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
@@ -447,16 +489,28 @@ const AdminScheduling = () => {
           --fc-event-border-color: #4f46e5;
         }
         .calendar-container .fc .fc-toolbar-title {
-          font-size: 1.25rem;
-          font-weight: 700;
+          font-size: 0.9rem;
+          font-weight: 800;
           color: #111827;
         }
+        @media (min-width: 640px) {
+          .calendar-container .fc .fc-toolbar-title {
+            font-size: 1.25rem;
+          }
+        }
         .calendar-container .fc .fc-button {
-          font-weight: 600;
+          font-weight: 700;
           text-transform: capitalize;
           border-radius: 0.5rem;
-          padding: 0.4rem 0.8rem;
+          padding: 0.3rem 0.6rem;
+          font-size: 10px;
           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        @media (min-width: 640px) {
+          .calendar-container .fc .fc-button {
+            padding: 0.4rem 0.8rem;
+            font-size: 13px;
+          }
         }
         .calendar-container .fc .fc-button-primary:not(:disabled):active, 
         .calendar-container .fc .fc-button-primary:not(:disabled).fc-button-active {
@@ -465,34 +519,62 @@ const AdminScheduling = () => {
           border-color: #c7d2fe;
         }
         .calendar-container .fc .fc-col-header-cell-cushion {
-          padding: 0.75rem 0;
+          padding: 0.5rem 0;
           font-weight: 600;
           color: #4b5563;
           text-transform: uppercase;
-          font-size: 0.75rem;
+          font-size: 0.65rem;
           letter-spacing: 0.05em;
+        }
+        @media (min-width: 640px) {
+          .calendar-container .fc .fc-col-header-cell-cushion {
+            padding: 0.75rem 0;
+            font-size: 0.75rem;
+          }
         }
         .calendar-container .fc-theme-standard td, 
         .calendar-container .fc-theme-standard th {
           border-color: #f3f4f6;
         }
         .calendar-container .fc-timegrid-slot-label-cushion {
-          font-size: 0.75rem;
+          font-size: 0.65rem;
           color: #6b7280;
           font-weight: 500;
         }
+        @media (min-width: 640px) {
+          .calendar-container .fc-timegrid-slot-label-cushion {
+            font-size: 0.75rem;
+          }
+        }
         .calendar-container .fc-event {
           border-radius: 0.375rem;
-          padding: 2px 4px;
-          font-size: 0.75rem;
+          padding: 1px 2px;
+          font-size: 0.65rem;
           font-weight: 600;
           border: none;
           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-          transition: transform 0.1s;
+        }
+        @media (min-width: 640px) {
+          .calendar-container .fc-event {
+            padding: 2px 4px;
+            font-size: 0.75rem;
+          }
         }
         .calendar-container .fc-event:hover {
           transform: scale(1.02);
           z-index: 10 !important;
+        }
+        /* Mobile specific toolbar stacking */
+        @media (max-width: 640px) {
+          .fc-header-toolbar {
+            flex-direction: column;
+            gap: 10px;
+          }
+          .fc-toolbar-chunk {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+          }
         }
       `}</style>
     </div>

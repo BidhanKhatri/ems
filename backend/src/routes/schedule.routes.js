@@ -11,16 +11,16 @@ import {
 const router = express.Router();
 
 router.use(requireAuth);
-router.use(requireRole('ADMIN'));
+// router.use(requireRole('ADMIN')); // Removed global admin check
 
 router.route('/')
   .get(getSchedules)
-  .post(createSchedule);
+  .post(requireRole('ADMIN'), createSchedule);
 
-router.post('/copy-week', copyWeekSchedule);
+router.post('/copy-week', requireRole('ADMIN'), copyWeekSchedule);
 
 router.route('/:id')
-  .put(updateSchedule)
-  .delete(deleteSchedule);
+  .put(requireRole('ADMIN'), updateSchedule)
+  .delete(requireRole('ADMIN'), deleteSchedule);
 
 export default router;

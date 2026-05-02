@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
 import {
-  Users, Search, UserMinus, ShieldAlert, ShieldCheck,
-  ChevronLeft, ChevronRight, MoreVertical, Trash2,
+  Users, Search, ShieldAlert, ShieldCheck,
+  ChevronLeft, ChevronRight, Trash2,
   UserX, UserCheck, Filter as FilterIcon, MessageSquarePlus, Image as ImageIcon, X
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -26,6 +26,7 @@ const Employees = () => {
   const [feedbackPoints, setFeedbackPoints] = useState('');
   const [feedbackImage, setFeedbackImage] = useState(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchUsers();
@@ -47,6 +48,8 @@ const Employees = () => {
       setLoading(false);
     }
   };
+
+
 
   const handleToggleStatus = async (userId, bypass = false) => {
     const userToToggle = users.find(u => u._id === userId);
@@ -84,7 +87,7 @@ const Employees = () => {
       await api.post(`/admin/users/${feedbackModalFor}/feedback`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       toast.success('Feedback submitted and employee notified');
       setFeedbackModalFor(null);
       setFeedbackText('');
@@ -143,7 +146,8 @@ const Employees = () => {
 
       {/* Users Table Card */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px] flex flex-col">
-        <div className="overflow-x-auto flex-1">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
@@ -175,8 +179,12 @@ const Employees = () => {
                   <tr key={row._id} className="hover:bg-indigo-50/30 transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 flex-shrink-0">
-                          {row.name.charAt(0).toUpperCase()}
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 flex-shrink-0 overflow-hidden">
+                          {row.profilePicture ? (
+                            <img src={row.profilePicture} alt={row.name} className="w-full h-full object-cover" />
+                          ) : (
+                            row.name.charAt(0).toUpperCase()
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 truncate">{row.name}</p>
@@ -245,6 +253,54 @@ const Employees = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {loading ? (
+             <div className="p-8 text-center animate-pulse text-gray-400 font-bold uppercase tracking-widest">Loading Directory...</div>
+          ) : users.length === 0 ? (
+            <div className="p-12 text-center opacity-40 italic">No employees found.</div>
+          ) : (
+            users.map((row) => (
+              <div key={row._id} className="p-5 flex flex-col gap-5 bg-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold overflow-hidden shadow-sm">
+                      {row.profilePicture ? <img src={row.profilePicture} className="w-full h-full object-cover" /> : row.name[0]}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 leading-tight">{row.name}</p>
+                      <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">{row.role}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-gray-900 tabular-nums">{row.performanceScore} pts</p>
+                    <p className="text-[10px] text-gray-400 font-medium">{row.groupId?.name || 'Unassigned'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                   <button onClick={() => setFeedbackFor(row._id)} className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 flex items-center justify-center gap-2">
+                     <MessageSquarePlus className="w-4 h-4" />
+                     <span className="text-[11px] font-bold uppercase tracking-wider">Feedback</span>
+                   </button>
+                   <button 
+                     onClick={() => handleToggleStatus(row._id)}
+                     className={`flex-1 py-3 rounded-2xl border flex items-center justify-center gap-2 transition-all ${
+                       row.isActive ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                     }`}
+                   >
+                     {row.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                     <span className="text-[11px] font-bold uppercase tracking-wider">{row.isActive ? 'Block' : 'Unblock'}</span>
+                   </button>
+                   <button onClick={() => setDeleteConfirm(row._id)} className="p-3 bg-red-50 text-red-500 border border-red-100 rounded-2xl">
+                     <Trash2 className="w-4 h-4" />
+                   </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Pagination Bar */}
@@ -378,20 +434,50 @@ const Employees = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Attach Image</label>
-                  <label className="w-full px-4 py-3 bg-gray-50 border border-gray-200 border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors overflow-hidden">
-                    <ImageIcon className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-500 font-medium truncate">
-                      {feedbackImage ? feedbackImage.name : 'Choose File'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => setFeedbackImage(e.target.files[0])}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="flex gap-2">
+                    <label className={`flex-1 px-4 py-3 bg-gray-50 border border-gray-200 border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors overflow-hidden ${feedbackImage ? 'ring-2 ring-indigo-500/20 border-indigo-500' : ''}`}>
+                      <ImageIcon className={`w-4 h-4 mr-2 ${feedbackImage ? 'text-indigo-500' : 'text-gray-400'} flex-shrink-0`} />
+                      <span className={`text-xs font-medium truncate ${feedbackImage ? 'text-indigo-700' : 'text-gray-500'}`}>
+                        {feedbackImage ? feedbackImage.name : 'Choose File'}
+                      </span>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={e => setFeedbackImage(e.target.files[0])}
+                        className="hidden"
+                      />
+                    </label>
+                    {feedbackImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFeedbackImage(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        className="p-3 bg-red-50 text-red-500 border border-red-100 rounded-xl hover:bg-red-100 transition-colors"
+                        title="Remove image"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Image Preview */}
+              {feedbackImage && (
+                <div className="relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 aspect-video group">
+                  <img
+                    src={URL.createObjectURL(feedbackImage)}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <p className="text-white text-[10px] font-bold uppercase tracking-widest">Image Preview</p>
+                  </div>
+                </div>
+              )}
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
@@ -400,6 +486,7 @@ const Employees = () => {
                     setFeedbackImage(null);
                     setFeedbackText('');
                     setFeedbackPoints('');
+                    if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
                   className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
                 >
@@ -417,6 +504,7 @@ const Employees = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

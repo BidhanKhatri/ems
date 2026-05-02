@@ -14,13 +14,16 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import AttendanceHistory from './pages/AttendanceHistory';
 import Profile from './pages/Profile';
 import EmployeeNotifications from './pages/EmployeeNotifications';
+import WorkSchedule from './pages/WorkSchedule';
+import ApprovalStatus from './pages/ApprovalStatus';
 import AdminDashboard from './pages/AdminDashboard';
-import ActivityTracking from './pages/ActivityTracking';
+
 import Approvals from './pages/Approvals';
 import Groups from './pages/Groups';
 import Settings from './pages/Settings';
 import Employees from './pages/Employees';
 import AdminScheduling from './pages/AdminScheduling';
+import AdminAttendance from './pages/AdminAttendance';
 
 const App = () => {
   return (
@@ -41,6 +44,7 @@ const App = () => {
             <Route path="/dashboard" element={<EmployeeDashboard />} />
             <Route path="/attendance" element={<AttendanceHistory />} />
             <Route path="/notifications" element={<EmployeeNotifications />} />
+            <Route path="/schedule" element={<WorkSchedule />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>
@@ -49,15 +53,17 @@ const App = () => {
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
           <Route element={<DashboardLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/activity-tracking" element={<ActivityTracking />} />
+
             <Route path="/admin/approvals" element={<Approvals />} />
             <Route path="/admin/employees" element={<Employees />} />
             <Route path="/admin/scheduling" element={<AdminScheduling />} />
+            <Route path="/admin/attendance" element={<AdminAttendance />} />
             <Route path="/admin/groups" element={<Groups />} />
             <Route path="/admin/settings" element={<Settings />} />
           </Route>
         </Route>
 
+        <Route path="/approval-status" element={<ApprovalStatus />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

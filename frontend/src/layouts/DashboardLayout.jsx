@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
-import { LogOut, Home, Users, CheckSquare, Shield, Settings, ChevronLeft, ChevronRight, UserCircle2, Radar, BellRing, Menu, X, Calendar } from 'lucide-react';
+import { LogOut, Home, Users, CheckSquare, Shield, Settings, ChevronLeft, ChevronRight, UserCircle2, BellRing, Menu, X, Calendar, ClipboardList, Clock, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 
 const DashboardLayout = () => {
@@ -9,9 +9,12 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCheckins, setPendingCheckins] = useState(0);
+  const [pendingAccounts, setPendingAccounts] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isApprovalsOpen, setIsApprovalsOpen] = useState(false);
 
   // Poll for pending approvals every 30s (admin only)
   useEffect(() => {
@@ -21,6 +24,8 @@ const DashboardLayout = () => {
       try {
         const { data } = await api.get('/admin/dashboard');
         setPendingCount(data.pendingApprovals ?? 0);
+        setPendingCheckins(data.pendingCheckins ?? 0);
+        setPendingAccounts(data.pendingAccounts ?? 0);
       } catch {
         // silently ignore
       }
@@ -51,6 +56,13 @@ const DashboardLayout = () => {
     return () => window.removeEventListener('notificationUpdate', handleRefresh);
   }, [user]);
 
+  // Auto-close Approvals menu when navigating away from it
+  useEffect(() => {
+    if (!location.pathname.startsWith('/admin/approvals')) {
+      setIsApprovalsOpen(false);
+    }
+  }, [location.pathname]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -61,16 +73,27 @@ const DashboardLayout = () => {
       return [
         { name: 'Dashboard', path: '/admin', icon: <Home className="w-[18px] h-[18px] flex-shrink-0" /> },
         { name: 'Employees', path: '/admin/employees', icon: <UserCircle2 className="w-[18px] h-[18px] flex-shrink-0" /> },
-        { name: 'Activity Tracking', path: '/admin/activity-tracking', icon: <Radar className="w-[18px] h-[18px] flex-shrink-0" /> },
+        { name: 'Attendance', path: '/admin/attendance', icon: <ClipboardList className="w-[18px] h-[18px] flex-shrink-0" /> },
         { name: 'Scheduling', path: '/admin/scheduling', icon: <Calendar className="w-[18px] h-[18px] flex-shrink-0" /> },
-        { name: 'Approvals', path: '/admin/approvals', icon: <CheckSquare className="w-[18px] h-[18px] flex-shrink-0" />, badge: pendingCount },
+        {
+          name: 'Approvals',
+          path: '/admin/approvals',
+          icon: <CheckSquare className="w-[18px] h-[18px] flex-shrink-0" />,
+          badge: pendingCount,
+          hasSubmenu: true,
+          subItems: [
+            { name: 'Check-in Approvals', path: '/admin/approvals', icon: <Clock className="w-[14px] h-[14px]" />, badge: pendingCheckins },
+            { name: 'Account Approvals', path: '/admin/approvals?tab=accounts', icon: <UserCircle2 className="w-[14px] h-[14px]" />, badge: pendingAccounts },
+          ]
+        },
         { name: 'Groups', path: '/admin/groups', icon: <Users className="w-[18px] h-[18px] flex-shrink-0" /> },
         { name: 'Settings', path: '/admin/settings', icon: <Settings className="w-[18px] h-[18px] flex-shrink-0" /> },
       ];
     }
     return [
       { name: 'Dashboard', path: '/dashboard', icon: <Home className="w-[18px] h-[18px] flex-shrink-0" /> },
-      { name: 'Attendance History', path: '/attendance', icon: <CheckSquare className="w-[18px] h-[18px] flex-shrink-0" /> },
+      { name: 'Attendance', path: '/attendance', icon: <ClipboardList className="w-[18px] h-[18px] flex-shrink-0" /> },
+      { name: 'Work Schedule', path: '/schedule', icon: <Calendar className="w-[18px] h-[18px] flex-shrink-0" /> },
       { name: 'Notifications', path: '/notifications', icon: <BellRing className="w-[18px] h-[18px] flex-shrink-0" />, badge: unreadCount },
       { name: 'Profile', path: '/profile', icon: <UserCircle2 className="w-[18px] h-[18px] flex-shrink-0" /> },
     ];
@@ -193,13 +216,13 @@ const DashboardLayout = () => {
           top: 0;
           bottom: 0;
           left: 0;
-          width: 70%;
-          max-width: 300px;
+          width: 85%;
+          max-width: 320px;
           background: ${theme.sidebarBg.split(' ')[0]};
           z-index: 101;
           transform: translateX(-100%);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 30px 0 60px rgba(0,0,0,0.12);
+          transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 20px 0 50px rgba(0,0,0,0.15);
           border: none;
           border-radius: 0;
         }
@@ -242,7 +265,76 @@ const DashboardLayout = () => {
           {/* Nav Links */}
           <nav className="flex-1 py-4 px-2 space-y-0.5" style={{ overflow: 'visible' }}>
             {getLinks().map((item) => {
-              const active = location.pathname === item.path;
+              const isApprovalsPath = location.pathname.startsWith('/admin/approvals');
+              const active = item.hasSubmenu ? isApprovalsPath : location.pathname === item.path;
+              const hasSubmenu = item.hasSubmenu;
+              const isOpen = isApprovalsOpen;
+
+              if (hasSubmenu) {
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <button
+                      onClick={() => !collapsed && setIsApprovalsOpen(!isOpen)}
+                      className={`nav-item group relative flex items-center rounded-lg px-2 py-2.5 text-[13px] font-medium transition-colors duration-150 w-full ${active
+                        ? theme.navItemActive
+                        : theme.navItemInactive
+                        }`}
+                      style={{ justifyContent: collapsed ? 'center' : 'flex-start', overflow: 'visible' }}
+                    >
+                      <span className={`flex-shrink-0 transition-colors ${active ? theme.navIconActive : theme.navIconInactive}`}>
+                        {item.icon}
+                      </span>
+                      <span className={`label-transition ml-3 flex-1 flex items-center justify-between ${collapsed ? 'opacity-0 w-0 ml-0' : 'opacity-100'}`}>
+                        {item.name}
+                        <div className="flex items-center gap-1.5">
+                          {item.badge > 0 && (
+                            <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-extrabold shadow-sm">
+                              {item.badge}
+                            </span>
+                          )}
+                          {!collapsed && <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
+                        </div>
+                      </span>
+                      {collapsed && item.badge > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 shadow-sm" />
+                      )}
+                      {collapsed && (
+                        <span className="nav-tooltip">{item.name}</span>
+                      )}
+                    </button>
+
+                    {isOpen && !collapsed && (
+                      <div className="mt-1 ml-4 pl-4 border-l border-gray-100 space-y-1">
+                        <div className="h-px bg-gray-50 mb-2 w-full" />
+                        {item.subItems.map((sub) => {
+                          const subActive = location.pathname === sub.path.split('?')[0] && (sub.path.includes('?') ? location.search.includes(sub.path.split('?')[1]) : !location.search);
+                          return (
+                            <Link
+                              key={sub.name}
+                              to={sub.path}
+                              className={`flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-[11.5px] font-bold transition-all ${subActive
+                                ? 'text-indigo-600 bg-indigo-50/50'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                {sub.icon}
+                                {sub.name}
+                              </div>
+                              {sub.badge > 0 && (
+                                <span className="min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-indigo-500 text-white text-[8px] font-black shadow-sm">
+                                  {sub.badge}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.name}
@@ -292,10 +384,14 @@ const DashboardLayout = () => {
           <div className={`border-t p-3 flex flex-col gap-2 ${theme.userWrapperBorder}`} style={{ overflow: 'visible' }}>
             {!collapsed && (
               <div className={`px-2 py-2 rounded-lg flex items-center gap-2.5 ${theme.userCardBg}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${theme.userAvatarWrapper}`}>
-                  <span className={`text-[11px] font-bold ${theme.userAvatarText}`}>
-                    {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-                  </span>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${theme.userAvatarWrapper} overflow-hidden`}>
+                  {user?.profilePicture ? (
+                    <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className={`text-[11px] font-bold ${theme.userAvatarText}`}>
+                      {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
+                    </span>
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className={`text-[12px] font-semibold truncate leading-tight ${theme.userName}`}>{user?.name}</p>
@@ -345,7 +441,61 @@ const DashboardLayout = () => {
 
           <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
             {getLinks().map((item) => {
-              const active = location.pathname === item.path;
+              const isApprovalsPath = location.pathname.startsWith('/admin/approvals');
+              const active = item.hasSubmenu ? isApprovalsPath : location.pathname === item.path;
+              
+              if (item.hasSubmenu) {
+                const isOpen = isApprovalsOpen;
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <button
+                      onClick={() => setIsApprovalsOpen(!isOpen)}
+                      className={`relative flex items-center w-full px-4 py-4 text-[14px] font-semibold transition-all duration-200 ${active ? theme.navItemActive : theme.navItemInactive}`}
+                    >
+                      {active && <span className="active-bar" />}
+                      <span className={`mr-3.5 ${active ? theme.navIconActive : theme.navIconInactive}`}>
+                        {item.icon}
+                      </span>
+                      <span className="flex-1 text-left">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        {item.badge > 0 && (
+                          <span className="min-w-[20px] h-[20px] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black">
+                            {item.badge}
+                          </span>
+                        )}
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
+                    
+                    {isOpen && (
+                      <div className="ml-8 border-l border-gray-100 pl-4 space-y-1 py-1">
+                        {item.subItems.map((sub) => {
+                           const subActive = location.pathname === sub.path.split('?')[0] && (sub.path.includes('?') ? location.search.includes(sub.path.split('?')[1]) : !location.search);
+                           return (
+                            <Link
+                              key={sub.name}
+                              to={sub.path}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className={`flex items-center justify-between px-4 py-3 rounded-xl text-[13px] font-bold transition-all ${subActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className={subActive ? 'text-indigo-600' : 'text-gray-400'}>{sub.icon}</span>
+                                {sub.name}
+                              </div>
+                              {sub.badge > 0 && (
+                                <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-indigo-500 text-white text-[9px] font-black">
+                                  {sub.badge}
+                                </span>
+                              )}
+                            </Link>
+                           );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.name}
@@ -372,10 +522,14 @@ const DashboardLayout = () => {
 
           <div className={`border-t p-4 ${theme.userWrapperBorder}`}>
             <div className={`p-3 flex items-center gap-3 mb-3 ${theme.userCardBg}`}>
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme.userAvatarWrapper}`}>
-                <span className={`text-[13px] font-bold ${theme.userAvatarText}`}>
-                  {user?.name?.charAt(0)?.toUpperCase()}
-                </span>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme.userAvatarWrapper} overflow-hidden`}>
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className={`text-[13px] font-bold ${theme.userAvatarText}`}>
+                    {user?.name?.charAt(0)?.toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="min-w-0">
                 <p className={`text-[13px] font-bold truncate ${theme.userName}`}>{user?.name}</p>
@@ -423,8 +577,12 @@ const DashboardLayout = () => {
                 </Link>
               )}
               <div className={`hidden sm:flex items-center gap-2 border px-3 py-1.5 rounded-full ${theme.headerUserPill}`}>
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${theme.headerUserAvatarPillBg}`}>
-                  <span className={`text-[10px] font-bold ${theme.headerUserAvatarPillText}`}>{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${theme.headerUserAvatarPillBg} overflow-hidden`}>
+                  {user?.profilePicture ? (
+                    <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className={`text-[10px] font-bold ${theme.headerUserAvatarPillText}`}>{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</span>
+                  )}
                 </div>
                 <span className={`text-[12.5px] font-semibold ${theme.headerUserNameText}`}>{user?.name}</span>
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${theme.headerUserRoleText}`}>({user?.role})</span>

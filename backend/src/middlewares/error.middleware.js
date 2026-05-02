@@ -5,8 +5,8 @@ export const errorHandler = (err, req, res, next) => {
   let { statusCode, message } = err;
   
   if (!err.isOperational) {
-    statusCode = 500;
-    message = 'Internal Server Error';
+    statusCode = statusCode || 500;
+    message = message || 'Internal Server Error';
   }
 
   res.locals.errorMessage = err.message;

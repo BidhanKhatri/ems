@@ -19,7 +19,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Redirect to login handled by AuthStore / router guards
+      import('../store/useAuthStore').then((module) => {
+        module.default.getState().logout();
+      });
     }
     // Keep UI stable under rapid refresh/load spikes
     if (error.response?.status === 429) {

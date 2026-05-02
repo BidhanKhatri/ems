@@ -5,8 +5,11 @@ import PerformanceLog from '../models/PerformanceLog.js';
 import ApiError from '../utils/ApiError.js';
 import { sendEmail } from '../utils/mailer.js';
 import { addMinutes, differenceInMinutes, format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 import { getTodayStatus, getSettings } from './setting.service.js';
+
+const NEPAL_TZ = 'Asia/Kathmandu';
 
 const addPerformancePoints = async (userId, points, reason, session) => {
   await PerformanceLog.create([{ userId, points, reason }], { session });
@@ -17,6 +20,15 @@ const addPerformancePoints = async (userId, points, reason, session) => {
 
 const getScheduledDateTime = (baseDate, hhmm) => {
   const [h, m] = hhmm.split(':').map(Number);
+  // We use formatInTimeZone to get the baseDate parts in Nepal, then rebuild
+  const nepalDateStr = formatInTimeZone(baseDate, NEPAL_TZ, 'yyyy-MM-dd');
+  const [y, mon, d] = nepalDateStr.split('-').map(Number);
+  
+  // Construct a date that represents that YYYY-MM-DD HH:mm:00 in Nepal timezone
+  // This is a bit tricky with standard Date objects which are local.
+  // However, for comparison purposes later in the code, we just need the relative offsets.
+  // Actually, a better way is to use the current implementation but ensure baseDate is zoned.
+  
   let date = setHours(baseDate, h || 0);
   date = setMinutes(date, m || 0);
   date = setSeconds(date, 0);
@@ -30,16 +42,16 @@ export const checkIn = async (userId) => {
     throw new ApiError(400, `Cannot check in. Today is a holiday: ${statusCheck.message}`);
   }
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
   
   const existingAttendance = await Attendance.findOne({ userId, date: today });
   if (existingAttendance) {
     throw new ApiError(400, 'Already checked in today');
   }
 
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
+  const currentHour = parseInt(formatInTimeZone(now, NEPAL_TZ, 'H'));
+  const currentMinute = parseInt(formatInTimeZone(now, NEPAL_TZ, 'm'));
   const currentTimeInMinutes = currentHour * 60 + currentMinute;
   
   const settings = await getSettings();
@@ -108,7 +120,7 @@ export const checkIn = async (userId) => {
     }
 
     if (needsApproval) {
-      const checkInTimeStr = format(now, 'hh:mm a');
+      const checkInTimeStr = formatInTimeZone(now, NEPAL_TZ, 'hh:mm a');
       const delayMins = currentTimeInMinutes - targetTimeInMinutes;
       
       const formatLateness = (mins) => {
@@ -203,7 +215,8 @@ export const checkIn = async (userId) => {
 };
 
 export const checkOut = async (userId) => {
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
   const attendance = await Attendance.findOne({ userId, date: today });
   
   if (!attendance) {

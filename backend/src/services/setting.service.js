@@ -4,6 +4,9 @@ import Attendance from '../models/Attendance.js';
 import User from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
 import { addMinutes, startOfDay, endOfDay, isWeekend, parseISO, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+
+const NEPAL_TZ = 'Asia/Kathmandu';
 
 const getScheduledDateTime = (baseDate, hhmm) => {
   const [h, m] = String(hhmm || '00:00').split(':').map(Number);
@@ -49,7 +52,7 @@ export const updateSettings = async (data) => {
       { $set: { nextActivityDueAt: null, lastActivityPromptAt: null } }
     );
   } else {
-    const today = now.toISOString().split('T')[0];
+    const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
     const activeAttendances = await Attendance.find({ date: today, checkOutTime: null }).select('userId');
     const userIds = activeAttendances.map((a) => a.userId);
     if (userIds.length) {
@@ -113,15 +116,22 @@ export const deleteHoliday = async (id) => {
 // Expose a public/employee endpoint helper to check current status quickly
 export const getTodayStatus = async (userId) => {
   const now = new Date();
+  const nepalNow = toZonedTime(now, NEPAL_TZ);
   const settings = await getSettings();
 
-  if (settings.disableWeekends && isWeekend(now)) {
+  if (settings.disableWeekends && isWeekend(nepalNow)) {
     return { isHoliday: true, message: 'Today is a Weekend', checkedIn: false };
   }
 
+  // Check holidays. Since holidays are stored as Date objects (midnight), 
+  // we check if the current Nepal date falls within any holiday range.
+  const todayString = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
+  const nepalStart = toZonedTime(`${todayString}T00:00:00`, NEPAL_TZ);
+  const nepalEnd = toZonedTime(`${todayString}T23:59:59`, NEPAL_TZ);
+
   const activeHoliday = await Holiday.findOne({
-    startDate: { $lte: endOfDay(now) },
-    endDate: { $gte: startOfDay(now) }
+    startDate: { $lte: nepalEnd },
+    endDate: { $gte: nepalStart }
   });
 
   if (activeHoliday) {
@@ -129,7 +139,6 @@ export const getTodayStatus = async (userId) => {
   }
 
   // Also check if employee is checked in already if not a holiday
-  const todayString = now.toISOString().split('T')[0];
   const attendance = await Attendance.findOne({ userId, date: todayString });
 
   return { isHoliday: false, checkedIn: !!attendance };

@@ -4,9 +4,10 @@ import Attendance from '../models/Attendance.js';
 import SystemSettings from '../models/SystemSettings.js';
 import Holiday from '../models/Holiday.js';
 import { processOverdueActivitySessions } from '../services/activity.service.js';
-import { subDays, startOfDay, endOfDay, isWeekend } from 'date-fns';
+import { subDays, startOfDay, endOfDay, isWeekend, addDays } from 'date-fns';
+import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 
-// Run at 23:59 on the last day of the month
+const NEPAL_TZ = 'Asia/Kathmandu';
 const initCronJobs = () => {
   // Run every minute for activity compliance monitoring
   cron.schedule('* * * * *', async () => {
@@ -15,21 +16,28 @@ const initCronJobs = () => {
     } catch (error) {
       console.error('Failed to run activity monitor job', error);
     }
-  });
+  }, { timezone: NEPAL_TZ });
 
   cron.schedule('5 0 * * *', async () => {
     try {
-      const yesterday = subDays(new Date(), 1);
-      const dateStr = yesterday.toISOString().split('T')[0];
+      const now = new Date();
+      const nepalNow = toZonedTime(now, NEPAL_TZ);
+      const yesterday = subDays(nepalNow, 1);
+      const dateStr = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd'); // This is actually 'today' string, wait
+      // The missed job checks for 'yesterday'. 
+      const yesterdayStr = formatInTimeZone(yesterday, NEPAL_TZ, 'yyyy-MM-dd');
       const settings = await SystemSettings.findOne();
 
       // 1. Skip if weekend disabled
       if (settings?.disableWeekends && isWeekend(yesterday)) return;
 
-      // 2. Skip if holiday
+      // 2. Skip if holiday (using Nepal boundaries)
+      const nepalStart = toZonedTime(`${yesterdayStr}T00:00:00`, NEPAL_TZ);
+      const nepalEnd = toZonedTime(`${yesterdayStr}T23:59:59`, NEPAL_TZ);
+
       const isHoliday = await Holiday.findOne({
-        startDate: { $lte: endOfDay(yesterday) },
-        endDate: { $gte: startOfDay(yesterday) }
+        startDate: { $lte: nepalEnd },
+        endDate: { $gte: nepalStart }
       });
       if (isHoliday) return;
 
@@ -38,30 +46,32 @@ const initCronJobs = () => {
 
       for (const employee of employees) {
         // 4. Check if attendance exists
-        const attendance = await Attendance.findOne({ userId: employee._id, date: dateStr });
+        const attendance = await Attendance.findOne({ userId: employee._id, date: yesterdayStr });
 
         if (!attendance) {
           // Create missed record
           await Attendance.create({
             userId: employee._id,
-            date: dateStr,
-            checkInTime: startOfDay(yesterday),
-            checkOutTime: endOfDay(yesterday),
+            date: yesterdayStr,
+            checkInTime: nepalStart,
+            checkOutTime: nepalEnd,
             status: 'MISSED',
             pointsAwarded: 0
           });
-          console.log(`[Job] Marked MISSED for ${employee.name} on ${dateStr}`);
+          console.log(`[Job] Marked MISSED for ${employee.name} on ${yesterdayStr}`);
         }
       }
     } catch (error) {
       console.error('Failed to run missed attendance job', error);
     }
-  });
+  }, { timezone: NEPAL_TZ });
 
   cron.schedule('59 23 28-31 * *', async () => {
-    // A trick to verify it's the actual last day of the month
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // A trick to verify it's the actual last day of the month in Nepal
+    const now = new Date();
+    const nepalNow = toZonedTime(now, NEPAL_TZ);
+    const tomorrow = addDays(nepalNow, 1);
+    
     if (tomorrow.getDate() !== 1) return;
 
     try {
@@ -72,13 +82,11 @@ const initCronJobs = () => {
 
       if (topEmployee) {
         console.log(`Congratulations to ${topEmployee.name} (ID: ${topEmployee._id})! They are the Employee of the Month with ${topEmployee.performanceScore} points.`);
-        // Note: Could also store this in a HallOfFame collection or reset scores here,
-        // but user prompt only states "calculate Employee of the Month".
       }
     } catch (error) {
       console.error('Failed to run EOTM job', error);
     }
-  });
+  }, { timezone: NEPAL_TZ });
 };
 
 export default initCronJobs;

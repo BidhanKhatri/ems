@@ -1,4 +1,5 @@
 import { addMinutes, format, isWeekend, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import ActivityLog from '../models/ActivityLog.js';
 import Attendance from '../models/Attendance.js';
 import Holiday from '../models/Holiday.js';
@@ -7,6 +8,8 @@ import PerformanceLog from '../models/PerformanceLog.js';
 import SystemSettings from '../models/SystemSettings.js';
 import User from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
+
+const NEPAL_TZ = 'Asia/Kathmandu';
 
 const getClientIp = (req) => {
   const forwarded = req.headers['x-forwarded-for'];
@@ -30,10 +33,16 @@ const getScheduledDateTime = (baseDate, hhmm) => {
 };
 
 const isHolidayOrWeekend = async (date, disableWeekends) => {
-  if (disableWeekends && isWeekend(date)) return true;
+  const zonedDate = toZonedTime(date, NEPAL_TZ);
+  if (disableWeekends && isWeekend(zonedDate)) return true;
+  
+  const todayString = formatInTimeZone(date, NEPAL_TZ, 'yyyy-MM-dd');
+  const nepalStart = toZonedTime(`${todayString}T00:00:00`, NEPAL_TZ);
+  const nepalEnd = toZonedTime(`${todayString}T23:59:59`, NEPAL_TZ);
+
   const holiday = await Holiday.findOne({
-    startDate: { $lte: date },
-    endDate: { $gte: date },
+    startDate: { $lte: nepalEnd },
+    endDate: { $gte: nepalStart },
   }).select('_id');
   return !!holiday;
 };
@@ -45,7 +54,7 @@ export const getEmployeeActivityStatus = async (userId) => {
   }
 
   const now = new Date();
-  const today = format(now, 'yyyy-MM-dd');
+  const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
   const attendance = await Attendance.findOne({ userId, date: today });
   if (!attendance || attendance.checkOutTime) {
     return { enabled: true, requiresAction: false, message: 'Activity tracking starts after check-in.' };
@@ -115,7 +124,7 @@ export const markEmployeeActive = async (user, payload, req) => {
   }
 
   const now = new Date();
-  const today = format(now, 'yyyy-MM-dd');
+  const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
   const attendance = await Attendance.findOne({ userId: user.id, date: today });
   if (!attendance || attendance.checkOutTime) {
     throw new ApiError(400, 'You can only mark active during an active work session.');
@@ -301,7 +310,7 @@ export const processOverdueActivitySessions = async () => {
   const now = new Date();
   if (await isHolidayOrWeekend(now, settings.disableWeekends)) return;
 
-  const today = format(now, 'yyyy-MM-dd');
+  const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
   const activeAttendances = await Attendance.find({ date: today, checkOutTime: null }).select('userId');
   if (!activeAttendances.length) return;
 

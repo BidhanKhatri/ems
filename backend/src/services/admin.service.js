@@ -264,7 +264,7 @@ export const getAccountApprovals = async (query) => {
   const { page = 1, limit = 5, status = '', search = '' } = query;
   const skip = (page - 1) * limit;
 
-  const filter = { role: 'EMPLOYEE' };
+  const filter = { role: 'EMPLOYEE', isVerified: true };
   if (status === 'PENDING') {
     filter.approvalStatus = { $in: ['PENDING', null] };
   } else if (status) {

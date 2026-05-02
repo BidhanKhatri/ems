@@ -25,7 +25,11 @@ const Login = () => {
         navigate('/dashboard');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      const msg = error.response?.data?.message || 'Login failed';
+      toast.error(msg);
+      if (msg.toLowerCase().includes('verify your email')) {
+        navigate('/verify-email', { state: { email } });
+      }
     } finally {
       setLoading(false);
     }
@@ -33,7 +37,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-100 p-4">
-      <div className="w-full max-w-5xl bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto min-h-[600px] border border-white/30">
+      <div className="w-full max-w-5xl bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto md:min-h-[600px] border border-white/30">
 
         {/* Left Panel */}
         <div className="hidden md:flex flex-col items-center justify-center w-1/2 p-10 bg-white/50 border-r border-white/20">

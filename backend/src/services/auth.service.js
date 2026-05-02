@@ -61,6 +61,7 @@ export const loginUserWithEmailAndPassword = async (email, password) => {
   }
   
   if (!user.isVerified) {
+    await resendOTP(user.email);
     throw new ApiError(403, 'Please verify your email before logging in');
   }
 

@@ -11,8 +11,12 @@ const Register = () => {
     name: '', 
     email: '', 
     password: '',
+    confirmPassword: '',
     profilePicture: '' 
   });
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -23,11 +27,62 @@ const Register = () => {
     setFormData(prev => ({ ...prev, profilePicture: avatarSrc }));
   }, []);
 
+  const validatePassword = (pass) => {
+    if (!pass) return '';
+    if (pass.length < 8) return 'Password must be at least 8 characters';
+    if (!/[A-Z]/.test(pass)) return 'Password must contain a capital letter';
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pass)) return 'Password must contain a symbol';
+    return '';
+  };
+
+  const validateEmail = (email) => {
+    if (!email) return '';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return '';
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setFormData({ ...formData, email: val });
+    setEmailError(validateEmail(val));
+  };
+
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setFormData({ ...formData, password: val });
+    setPasswordError(validatePassword(val));
+    if (formData.confirmPassword) {
+      setConfirmPasswordError(val !== formData.confirmPassword ? 'Passwords do not match' : '');
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const val = e.target.value;
+    setFormData({ ...formData, confirmPassword: val });
+    setConfirmPasswordError(val && formData.password !== val ? 'Passwords do not match' : '');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (emailError) {
+      toast.error('Please provide a valid email address.');
+      return;
+    }
+    if (passwordError) {
+      toast.error('Please fix the password errors before submitting.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(formData);
+      // Exclude confirmPassword from the payload sent to the backend
+      const { confirmPassword, ...payload } = formData;
+      await register(payload);
       toast.success('Registration successful. Please check your email for OTP.');
       navigate('/verify-email', { state: { email: formData.email } });
     } catch (error) {
@@ -39,7 +94,7 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 to-purple-100 p-4">
-      <div className="w-full max-w-5xl bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto min-h-[650px] lg:h-[720px] border border-white/30">
+      <div className="w-full max-w-5xl bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto md:min-h-[650px] lg:min-h-[720px] border border-white/30">
 
         {/* Left Panel */}
         <div className="hidden md:flex flex-col items-center justify-center w-1/2 p-10 bg-white/50 border-r border-white/20">
@@ -81,7 +136,7 @@ const Register = () => {
 
           <AvatarSelector onSelect={handleAvatarSelect} initialAvatar="emp_2.png" />
 
-          <form className="w-full space-y-4 mt-2" onSubmit={handleSubmit}>
+          <form className="w-full space-y-5 sm:space-y-6 mt-4" onSubmit={handleSubmit}>
             <FloatingInput
               label="Full Name"
               icon={User}
@@ -91,26 +146,56 @@ const Register = () => {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
 
-            <FloatingInput
-              label="Email Address"
-              icon={Mail}
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
+            <div className="flex flex-col gap-1">
+              <FloatingInput
+                label="Email Address"
+                icon={Mail}
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleEmailChange}
+              />
+              {emailError && (
+                <p className="text-[11px] font-medium text-red-500 pl-2 animate-in slide-in-from-top-1">
+                  {emailError}
+                </p>
+              )}
+            </div>
 
-            <FloatingInput
-              label="Password"
-              icon={Lock}
-              type={showPassword ? 'text' : 'password'}
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              showPasswordToggle={true}
-              onTogglePassword={() => setShowPassword(!showPassword)}
-              isPasswordVisible={showPassword}
-            />
+            <div className="flex flex-col gap-1">
+              <FloatingInput
+                label="Password"
+                icon={Lock}
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={formData.password}
+                onChange={handlePasswordChange}
+                showPasswordToggle={true}
+                onTogglePassword={() => setShowPassword(!showPassword)}
+                isPasswordVisible={showPassword}
+              />
+              {passwordError && (
+                <p className="text-[11px] font-medium text-red-500 pl-2 animate-in slide-in-from-top-1">
+                  {passwordError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <FloatingInput
+                label="Confirm Password"
+                icon={Lock}
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={formData.confirmPassword}
+                onChange={handleConfirmPasswordChange}
+              />
+              {confirmPasswordError && (
+                <p className="text-[11px] font-medium text-red-500 pl-2 animate-in slide-in-from-top-1">
+                  {confirmPasswordError}
+                </p>
+              )}
+            </div>
 
             <button
               type="submit"

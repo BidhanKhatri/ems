@@ -6,6 +6,68 @@ import 'react-day-picker/dist/style.css';
 import { Settings as SettingsIcon, Calendar as CalendarIcon, Save, Mail, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
 
+const AmPmTimePicker = ({ value, onChange }) => {
+  const [hourStr, minuteStr] = (value || "09:00").split(":");
+  const currentHour24 = parseInt(hourStr, 10);
+  const m = minuteStr;
+  const ampm = currentHour24 >= 12 ? 'PM' : 'AM';
+  let displayHour = currentHour24 % 12;
+  if (displayHour === 0) displayHour = 12;
+
+  const handleHourChange = (e) => {
+    let selectedH = parseInt(e.target.value, 10);
+    let newH = selectedH;
+    if (ampm === 'PM' && selectedH !== 12) newH += 12;
+    if (ampm === 'AM' && selectedH === 12) newH = 0;
+    onChange(`${newH.toString().padStart(2, '0')}:${m}`);
+  };
+
+  const handleMinuteChange = (e) => {
+    onChange(`${hourStr}:${e.target.value}`);
+  };
+
+  const handleAmPmChange = (e) => {
+    const newAmPm = e.target.value;
+    let newH = currentHour24;
+    if (newAmPm === 'PM' && currentHour24 < 12) newH += 12;
+    if (newAmPm === 'AM' && currentHour24 >= 12) newH -= 12;
+    onChange(`${newH.toString().padStart(2, '0')}:${m}`);
+  };
+
+  return (
+    <div className="flex items-center space-x-1">
+      <select 
+        value={displayHour.toString()} 
+        onChange={handleHourChange}
+        className="w-full px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900 text-center"
+      >
+        {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
+          <option key={num} value={num.toString()}>{num.toString().padStart(2, '0')}</option>
+        ))}
+      </select>
+      <span className="font-bold text-gray-400">:</span>
+      <select 
+        value={m} 
+        onChange={handleMinuteChange}
+        className="w-full px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900 text-center"
+      >
+        {Array.from({ length: 60 }, (_, i) => i).map(num => {
+          const val = num.toString().padStart(2, '0');
+          return <option key={val} value={val}>{val}</option>;
+        })}
+      </select>
+      <select 
+        value={ampm} 
+        onChange={handleAmPmChange}
+        className="w-full px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900 text-center"
+      >
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  );
+};
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('schedules');
   const [showPassword, setShowPassword] = useState(false);
@@ -152,22 +214,16 @@ const Settings = () => {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Standard Check-In</label>
-                      <input
-                        type="time"
-                        required
+                      <AmPmTimePicker
                         value={settings.checkInTime}
-                        onChange={(e) => setSettings({ ...settings, checkInTime: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900"
+                        onChange={(val) => setSettings({ ...settings, checkInTime: val })}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Standard Check-Out</label>
-                      <input
-                        type="time"
-                        required
+                      <AmPmTimePicker
                         value={settings.checkOutTime || '17:00'}
-                        onChange={(e) => setSettings({ ...settings, checkOutTime: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-900"
+                        onChange={(val) => setSettings({ ...settings, checkOutTime: val })}
                       />
                     </div>
                   </div>

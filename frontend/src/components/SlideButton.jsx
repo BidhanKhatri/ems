@@ -58,9 +58,9 @@ export default function SlideButton({ onSlide, text, disabled, color = 'primary'
     }
   };
 
-  const bgColor = color === 'primary' ? 'bg-amber-800' : 'bg-stone-800';
-  const trackBg = color === 'primary' ? 'bg-amber-100/50' : 'bg-stone-200/60';
-  const textColor = color === 'primary' ? 'text-amber-900' : 'text-stone-800';
+  const bgColor = color === 'primary' ? 'bg-indigo-600' : 'bg-gray-800';
+  const trackBg = color === 'primary' ? 'bg-indigo-50' : 'bg-gray-100';
+  const textColor = color === 'primary' ? 'text-indigo-900' : 'text-gray-800';
   const safeSliderWidth = sliderWidth > 0 ? sliderWidth : 1;
   const rawTextOpacity = Math.max(0, 1 - (offsetX / safeSliderWidth) * 1.5);
   const textOpacity = Number.isFinite(rawTextOpacity) ? Math.min(1, rawTextOpacity) : 1;
@@ -68,7 +68,7 @@ export default function SlideButton({ onSlide, text, disabled, color = 'primary'
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full h-14 rounded-full flex items-center overflow-hidden border shadow-inner ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${trackBg} border-stone-200`}
+      className={`relative w-full h-14 rounded-full flex items-center overflow-hidden border shadow-inner ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${trackBg} border-gray-200`}
       style={{ userSelect: 'none' }}
     >
       {/* Background fill based on slide progress */}
@@ -79,14 +79,14 @@ export default function SlideButton({ onSlide, text, disabled, color = 'primary'
 
       {/* Text inside the slider */}
       <div 
-        className="absolute inset-0 flex items-center justify-center font-bold text-sm uppercase tracking-wider z-0 pointer-events-none"
+        className="absolute inset-0 flex items-center justify-center font-bold text-sm uppercase tracking-wider z-0 pointer-events-none select-none transition-opacity duration-300"
         style={{ opacity: isSuccess ? 0 : textOpacity }}
       >
-        <span className={textColor}>{text}</span>
+        <span className={`${textColor} shimmer-text`}>{text}</span>
       </div>
 
       <div 
-        className="absolute inset-0 flex items-center justify-center font-bold text-sm uppercase tracking-wider z-0 pointer-events-none transition-opacity duration-300"
+        className="absolute inset-0 flex items-center justify-center font-bold text-sm uppercase tracking-wider z-0 pointer-events-none select-none transition-opacity duration-300"
         style={{ opacity: isSuccess ? 1 : 0 }}
       >
         <span className="text-emerald-600 ml-8">Processing...</span>
@@ -107,6 +107,29 @@ export default function SlideButton({ onSlide, text, disabled, color = 'primary'
       >
         {isSuccess ? <Check className="w-5 h-5 animate-bounce" /> : <ArrowRight className="w-5 h-5" />}
       </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 150% 0; }
+          100% { background-position: -150% 0; }
+        }
+        .shimmer-text {
+          background: linear-gradient(
+            to right, 
+            #4f46e5 0%, 
+            #4f46e5 40%, 
+            #a5b4fc 50%, 
+            #4f46e5 60%, 
+            #4f46e5 100%
+          );
+          background-size: 200% auto;
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 3s infinite linear;
+          display: inline-block;
+        }
+      `}</style>
     </div>
   );
 }

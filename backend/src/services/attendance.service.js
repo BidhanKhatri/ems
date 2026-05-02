@@ -56,7 +56,11 @@ export const checkIn = async (userId) => {
   let needsApproval = false;
 
   if (currentTimeInMinutes < T_EARLY_LOWER) {
-    throw new ApiError(400, `Too early to check-in. Please wait until ${Math.floor(T_EARLY_LOWER / 60)}:${String(T_EARLY_LOWER % 60).padStart(2, '0')}.`);
+    const waitH = Math.floor(T_EARLY_LOWER / 60);
+    const waitM = String(T_EARLY_LOWER % 60).padStart(2, '0');
+    const ampm = waitH >= 12 ? 'PM' : 'AM';
+    const hour12 = waitH % 12 || 12;
+    throw new ApiError(400, `Too early to check-in. Please wait until ${hour12}:${waitM} ${ampm}.`);
   } else if (currentTimeInMinutes >= T_EARLY_LOWER && currentTimeInMinutes <= T_ON_TIME) {
     status = 'EARLY';
     pointsAwarded = 10;

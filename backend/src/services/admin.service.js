@@ -246,7 +246,7 @@ export const processFeedback = async (userId, adminId, { text, points, imageUrl 
     await session.commitTransaction();
     session.endSession();
 
-    // Trigger real-time update
+    // Trigger real-time dashboard updates
     getIO().emit('admin:dashboard-update');
     getIO().emit('leaderboard:update');
 
@@ -269,7 +269,8 @@ export const processFeedback = async (userId, adminId, { text, points, imageUrl 
       userId,
       points !== 0 ? `Feedback Received (${points > 0 ? '+' : ''}${points} pts)` : 'Feedback Received',
       text,
-      { type: 'FEEDBACK', feedbackId: feedback[0]._id.toString() }
+      { type: 'FEEDBACK', feedbackId: feedback[0]._id.toString() },
+      false // DON'T save to DB again, we already did it inside the transaction
     ).catch(err => console.error('Push notification failed:', err));
 
     return {

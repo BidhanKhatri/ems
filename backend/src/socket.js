@@ -19,6 +19,13 @@ export const init = (httpServer) => {
   io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
+    socket.on('join', (userId) => {
+      if (userId) {
+        socket.join(userId);
+        console.log(`User ${userId} joined room ${userId}`);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
     });

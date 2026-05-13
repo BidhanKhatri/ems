@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { BellRing, ImageIcon, X, ExternalLink } from 'lucide-react';
 import api from '../services/api';
+import { useSocket } from '../context/SocketContext';
 
 const EmployeeNotifications = () => {
+  const { socket } = useSocket();
   const [sortMode, setSortMode] = useState('latest');
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
@@ -25,6 +27,30 @@ const EmployeeNotifications = () => {
   useEffect(() => {
     fetchNotifications(sortMode);
   }, [sortMode]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notification) => {
+      setNotifications((prev) => {
+        // Check if notification already exists to avoid duplicates
+        const exists = prev.find((n) => n._id === notification._id);
+        if (exists) return prev;
+        
+        // Add to the beginning of the list
+        return [notification, ...prev];
+      });
+      
+      // Also trigger a custom event if other parts of the app need to know
+      window.dispatchEvent(new CustomEvent('notificationUpdate'));
+    };
+
+    socket.on('notification:received', handleNewNotification);
+
+    return () => {
+      socket.off('notification:received', handleNewNotification);
+    };
+  }, [socket]);
 
   const markNotificationAsRead = async (id) => {
     try {

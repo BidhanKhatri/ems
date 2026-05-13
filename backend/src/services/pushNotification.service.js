@@ -40,19 +40,42 @@ const removeInvalidTokens = async (userId, failedTokens) => {
 /**
  * Send push notification to a specific user and save to DB
  */
-export const sendToUser = async (userId, title, body, metadata = {}) => {
+export const sendToUser = async (userId, title, body, metadata = {}, saveToDb = true) => {
   try {
     const user = await User.findById(userId);
     if (!user) return false;
 
-    // Save to DB
-    await Notification.create({
-      userId,
-      audience: user.role,
-      title,
-      message: body,
-      metadata,
-    });
+    let notification;
+    if (saveToDb) {
+      // Save to DB
+      notification = await Notification.create({
+        userId,
+        audience: user.role,
+        title,
+        message: body,
+        metadata,
+      });
+    }
+
+    // Emit via socket for real-time update in web portal
+    const { getIO } = await import('../socket.js');
+    try {
+      const io = getIO();
+      if (io) {
+        // If we saved to DB, use that object, otherwise construct a minimal one for the UI
+        const socketPayload = notification || {
+          userId,
+          title,
+          message: body,
+          metadata,
+          createdAt: new Date(),
+          isRead: false
+        };
+        io.to(userId.toString()).emit('notification:received', socketPayload);
+      }
+    } catch (socketErr) {
+      console.warn('Socket emission failed in sendToUser:', socketErr.message);
+    }
 
     if (!isFirebaseInitialized() || !user.fcmTokens || user.fcmTokens.length === 0) {
       return false;
@@ -110,6 +133,26 @@ export const sendToAdmins = async (title, body, metadata = {}) => {
     }));
     if (notifications.length > 0) {
       await Notification.insertMany(notifications);
+
+      // Emit via socket for real-time update in web portal
+      const { getIO } = await import('../socket.js');
+      try {
+        const io = getIO();
+        if (io) {
+          admins.forEach(admin => {
+            io.to(admin._id.toString()).emit('notification:received', {
+              userId: admin._id,
+              title,
+              message: body,
+              metadata,
+              createdAt: new Date(),
+              isRead: false
+            });
+          });
+        }
+      } catch (socketErr) {
+        console.warn('Socket emission failed in sendToAdmins:', socketErr.message);
+      }
     }
 
     if (!isFirebaseInitialized()) return false;
@@ -199,6 +242,26 @@ export const sendBroadcast = async (audience, title, body, metadata = {}) => {
     
     if (notifications.length > 0) {
       await Notification.insertMany(notifications);
+
+      // Emit via socket for real-time update in web portal
+      const { getIO } = await import('../socket.js');
+      try {
+        const io = getIO();
+        if (io) {
+          users.forEach(u => {
+            io.to(u._id.toString()).emit('notification:received', {
+              userId: u._id,
+              title,
+              message: body,
+              metadata,
+              createdAt: new Date(),
+              isRead: false
+            });
+          });
+        }
+      } catch (socketErr) {
+        console.warn('Socket emission failed in sendBroadcast:', socketErr.message);
+      }
     }
 
     if (!isFirebaseInitialized()) return false;

@@ -1,8 +1,11 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import SystemSettings from '../models/SystemSettings.js';
 import ApiError from '../utils/ApiError.js';
 import { sendEmail } from '../utils/mailer.js';
+import * as pushService from './pushNotification.service.js';
+import { getIO } from '../socket.js';
 
 export const generateTokens = (userId, role) => {
   const payload = { sub: userId, role };
@@ -95,6 +98,75 @@ export const verifyEmail = async (email, otp) => {
   user.otp = undefined;
   user.otpExpiresAt = undefined;
   await user.save();
+
+  // Notify admins about new user awaiting approval
+  if (user.role === 'EMPLOYEE') {
+    const title = 'New Account Approval Needed';
+    const body = `${user.name} has verified their email and is waiting for account approval.`;
+    const metadata = {
+      type: 'APPROVAL_REQUEST',
+      userId: user._id.toString(),
+      email: user.email
+    };
+
+    // This handles in-app DB notification, Socket emission, and Firebase Push
+    pushService.sendToAdmins(title, body, metadata).catch(err => {
+      console.error('Failed to notify admins of new registration:', err.message);
+    });
+
+    // Send Email Notification to Admin if configured
+    SystemSettings.findOne().then(settings => {
+      if (settings?.approvalNotificationEmail) {
+        const subject = `New Registration: Account Approval Required - ${user.name}`;
+        const html = `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div style="background-color: #4f46e5; padding: 24px; text-align: center;">
+              <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">New Account Approval</h2>
+            </div>
+            <div style="padding: 32px; background-color: #ffffff;">
+              <p style="margin-top: 0; font-size: 16px;">Hello <strong>Admin</strong>,</p>
+              <p style="color: #4b5563; font-size: 14px;">A new employee has completed verification and is waiting for your approval to access the portal.</p>
+              
+              <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #f3f4f6;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase; width: 120px;">Employee</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">${user.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase;">Email</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">${user.email}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 12px; font-weight: bold; text-transform: uppercase;">Status</td>
+                    <td style="padding: 8px 0; color: #4f46e5; font-size: 14px; font-weight: 800;">PENDING APPROVAL</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="text-align: center; margin-top: 32px;">
+                <a href="https://staffingbetit.com/admin/approvals?tab=accounts" style="background-color: #4f46e5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Review Registration</a>
+              </div>
+              
+              <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">
+                This is an automated notification from Staffingbetit.
+              </p>
+            </div>
+          </div>
+        `;
+        sendEmail({ to: settings.approvalNotificationEmail, subject, html }).catch(err => {
+          console.error('Failed to send admin registration email:', err);
+        });
+      }
+    });
+
+    // Trigger real-time dashboard update for admins to refresh pending counts
+    try {
+      getIO().emit('admin:dashboard-update');
+    } catch (socketErr) {
+      console.warn('Socket emission failed in verifyEmail:', socketErr.message);
+    }
+  }
 
   return user;
 };

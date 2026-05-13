@@ -4,6 +4,8 @@ import useAuthStore from '../store/useAuthStore';
 import { LogOut, Home, Users, CheckSquare, Settings, ChevronLeft, ChevronRight, UserCircle2, BellRing, Menu, X, Calendar, ClipboardList, Clock, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 import logo from '../assets/ems-logo.png';
+import { useSocket } from '../context/SocketContext';
+import { toast } from 'sonner';
 
 const DashboardLayout = () => {
   const { user, logout } = useAuthStore();
@@ -17,39 +19,77 @@ const DashboardLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isApprovalsOpen, setIsApprovalsOpen] = useState(false);
 
-  // Poll for pending approvals every 30s (admin only)
+  const { socket } = useSocket();
+
+  // Fetch pending approvals (admin only)
+  const fetchPending = async () => {
+    if (user?.role !== 'ADMIN') return;
+    try {
+      const { data } = await api.get('/admin/dashboard');
+      setPendingCount(data.pendingApprovals ?? 0);
+      setPendingCheckins(data.pendingCheckins ?? 0);
+      setPendingAccounts(data.pendingAccounts ?? 0);
+    } catch {
+      // silently ignore
+    }
+  };
+
   useEffect(() => {
     if (user?.role !== 'ADMIN') return;
-
-    const fetchPending = async () => {
-      try {
-        const { data } = await api.get('/admin/dashboard');
-        setPendingCount(data.pendingApprovals ?? 0);
-        setPendingCheckins(data.pendingCheckins ?? 0);
-        setPendingAccounts(data.pendingAccounts ?? 0);
-      } catch {
-        // silently ignore
-      }
-    };
 
     fetchPending();
     const interval = setInterval(fetchPending, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
-  // Fetch unread notifications count for employees
+  // Real-time socket listeners for admin dashboard & notifications
   useEffect(() => {
-    if (!user) return;
+    if (!socket || !user) return;
 
-    const fetchUnreadCount = async () => {
-      try {
-        const { data } = await api.get('/activity/notifications/unread-count');
-        setUnreadCount(data.count ?? 0);
-      } catch {
-        // silently ignore
+    const handleDashboardUpdate = () => {
+      if (user.role === 'ADMIN') {
+        console.log('[Socket] Refreshing dashboard counts...');
+        fetchPending();
       }
     };
 
+    const handleNewNotification = (data) => {
+      // Refresh unread count for the side badge
+      fetchUnreadCount();
+
+      // Show toast for admins if it's a critical request
+      if (user.role === 'ADMIN' && (data.metadata?.type === 'APPROVAL_REQUEST' || data.metadata?.type === 'LATE_CHECKIN')) {
+        toast.info(data.message || 'New approval request received', {
+           description: 'Check the approvals section for details',
+           action: {
+             label: 'Review',
+             onClick: () => navigate('/admin/approvals')
+           }
+        });
+      }
+    };
+
+    socket.on('admin:dashboard-update', handleDashboardUpdate);
+    socket.on('notification:received', handleNewNotification);
+
+    return () => {
+      socket.off('admin:dashboard-update', handleDashboardUpdate);
+      socket.off('notification:received', handleNewNotification);
+    };
+  }, [socket, user]);
+
+  // Fetch unread notifications count for employees
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const { data } = await api.get('/activity/notifications/unread-count');
+      setUnreadCount(data.count ?? 0);
+    } catch {
+      // silently ignore
+    }
+  };
+
+  useEffect(() => {
     fetchUnreadCount();
 
     const handleRefresh = () => fetchUnreadCount();

@@ -14,7 +14,7 @@ export const getDashboardStats = async () => {
   const totalEmployees = await User.countDocuments({ role: 'EMPLOYEE', approvalStatus: 'APPROVED' });
   const totalGroups = await Group.countDocuments();
   const pendingApprovals = await ApprovalRequest.countDocuments({ status: 'PENDING' });
-  const pendingAccounts = await User.countDocuments({ role: 'EMPLOYEE', approvalStatus: { $in: ['PENDING', null] } });
+  const pendingAccounts = await User.countDocuments({ role: 'EMPLOYEE', isVerified: true, approvalStatus: { $in: ['PENDING', null] } });
   const totalPending = pendingApprovals + pendingAccounts;
   
   const today = new Date().toISOString().split('T')[0];
@@ -133,8 +133,42 @@ export const processApproval = async (requestId, adminId, isApproved) => {
     sendToUser(
       request.userId,
       'Check-in Request Processed',
-      `Your late check-in request was ${isApproved ? 'Approved' : 'Rejected'} by Admin.`
+      `Your late check-in request was ${isApproved ? 'Approved' : 'Rejected'} by Admin.`,
+      { type: 'CHECKIN_APPROVAL', status: isApproved ? 'APPROVED' : 'REJECTED' }
     ).catch(err => console.error('Push notification failed:', err));
+
+    // Send Email to Employee
+    const user = await User.findById(request.userId);
+    if (user && user.email) {
+      const subject = `Late Check-in Request ${isApproved ? 'Approved' : 'Rejected'} - Staffingbetit`;
+      const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: ${isApproved ? '#059669' : '#dc2626'}; text-align: center;">Request ${isApproved ? 'Approved' : 'Rejected'}</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your request for late check-in on <strong>${attendance.date}</strong> has been ${isApproved ? 'approved' : 'rejected'} by the administrator.</p>
+          
+          <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Status:</strong> ${isApproved ? 'Approved' : 'Rejected'}</p>
+            <p style="margin: 5px 0;"><strong>Points Awarded:</strong> ${pointsPenalty}</p>
+            <p style="margin: 5px 0;"><strong>Message:</strong> Your attendance record has been updated accordingly.</p>
+          </div>
+          
+          <p>You can check your updated attendance status and performance score in your employee portal.</p>
+          <br>
+          <p>Staffingbetit Team</p>
+        </div>
+      `;
+      sendEmail({ to: user.email, subject, html }).catch(err => {
+        console.error('Failed to send approval email to employee:', err);
+      });
+    }
+
+    // Notify employee via socket for real-time dashboard update
+    try {
+      getIO().to(request.userId.toString()).emit('attendance:update');
+    } catch (socketErr) {
+      console.warn('Socket emission failed in processApproval:', socketErr.message);
+    }
 
     return request;
   } catch (error) {

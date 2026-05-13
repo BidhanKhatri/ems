@@ -85,7 +85,7 @@ const Login = () => {
 
         {/* Right Panel */}
         <div className="flex flex-col items-center justify-center w-full md:w-1/2 p-10 bg-white/10 backdrop-blur-sm">
-          <div className="w-24 h-24 flex items-center justify-center mb-6 rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden p-2 group transition-transform hover:scale-105">
+          <div className="w-20 h-20 flex items-center justify-center mb-6 rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden p-2 group transition-transform hover:scale-105">
             <img src={logo} alt="EMS Logo" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-8">Sign in</h2>

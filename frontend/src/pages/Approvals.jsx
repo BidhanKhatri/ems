@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { toast } from 'sonner';
 import { RotateCw, UserCheck, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Filter, AlertCircle, Mail } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
 
 const Approvals = () => {
   const [searchParams] = useSearchParams();
@@ -28,9 +29,37 @@ const Approvals = () => {
     else setActiveTab('checkins');
   }, [searchParams]);
 
+  const { socket } = useSocket();
+
   useEffect(() => {
     fetchData();
   }, [activeTab, accountPage, accountStatusFilter, accountSearch]);
+
+  // Real-time socket listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleDashboardUpdate = () => {
+      console.log('Real-time dashboard update received');
+      fetchData();
+    };
+
+    const handleNewNotification = (data) => {
+       // Only show toast if it's an approval request
+       if (data.metadata?.type === 'APPROVAL_REQUEST') {
+         toast.info(data.message || 'New account approval request received');
+         fetchData();
+       }
+    };
+
+    socket.on('admin:dashboard-update', handleDashboardUpdate);
+    socket.on('notification:received', handleNewNotification);
+
+    return () => {
+      socket.off('admin:dashboard-update', handleDashboardUpdate);
+      socket.off('notification:received', handleNewNotification);
+    };
+  }, [socket, activeTab]); // Re-bind if tab changes to ensure fresh fetchData context
 
   const fetchData = async (isManual = false) => {
     if (isManual) setRefreshing(true);

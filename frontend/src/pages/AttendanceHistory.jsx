@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import DownloadAttendanceModal from '../components/DownloadAttendanceModal';
+import { useSocket } from '../context/SocketContext';
 
 /* ── Custom Date Picker Button ── */
 const fmt = (iso) =>
@@ -82,23 +83,38 @@ const AttendanceHistory = () => {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const { user } = useAuthStore();
 
+  const { socket } = useSocket();
+
+  const fetchHistory = async () => {
+    try {
+      const { data } = await api.get('/attendance/me');
+      // Sort descending by date
+      const sorted = [...(Array.isArray(data) ? data : [])].sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+      setHistory(sorted);
+    } catch (err) {
+      console.error('Failed to fetch attendance history', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const { data } = await api.get('/attendance/me');
-        // Sort descending by date
-        const sorted = [...(Array.isArray(data) ? data : [])].sort(
-          (a, b) => new Date(b.date) - new Date(a.date)
-        );
-        setHistory(sorted);
-      } catch (err) {
-        console.error('Failed to fetch attendance history', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
+    fetchHistory();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      console.log('[Socket] Refreshing attendance history...');
+      fetchHistory();
+    };
+
+    socket.on('attendance:update', handleUpdate);
+    return () => socket.off('attendance:update', handleUpdate);
+  }, [socket]);
 
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [statusFilter, dateFrom, dateTo]);

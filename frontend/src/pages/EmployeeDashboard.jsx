@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import { toast } from 'sonner';
@@ -27,6 +27,8 @@ const EmployeeDashboard = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [selfRank, setSelfRank] = useState(null);
   const [lbLoading, setLbLoading] = useState(true);
+  const selfRankRef = useRef(null);
+  const leaderboardContainerRef = useRef(null);
 
   const { socket } = useSocket();
 
@@ -112,14 +114,47 @@ const EmployeeDashboard = () => {
       fetchPerformanceData(); // Points trend might have changed
     };
 
+    const handleAttendanceUpdate = () => {
+      console.log('Real-time attendance update received');
+      fetchTodayData();
+      fetchLatestProfile();
+      fetchPerformanceData();
+    };
+
     socket.on('settings:update', handleSettingsUpdate);
     socket.on('leaderboard:update', handleLeaderboardUpdate);
+    socket.on('attendance:update', handleAttendanceUpdate);
 
     return () => {
       socket.off('settings:update', handleSettingsUpdate);
       socket.off('leaderboard:update', handleLeaderboardUpdate);
+      socket.off('attendance:update', handleAttendanceUpdate);
     };
   }, [socket, fetchTodayData, fetchLeaderboard, fetchLatestProfile, fetchPerformanceData]);
+
+  // Auto-scroll to self rank in leaderboard (inside container only)
+  useEffect(() => {
+    if (!lbLoading && leaderboard.length > 0 && selfRankRef.current && leaderboardContainerRef.current) {
+      const timeout = setTimeout(() => {
+        const container = leaderboardContainerRef.current;
+        const target = selfRankRef.current;
+        
+        // Calculate position relative to container
+        const targetTop = target.offsetTop;
+        const containerHeight = container.clientHeight;
+        const targetHeight = target.clientHeight;
+        
+        // Center the target row in the scrollable area
+        const scrollTo = targetTop - (containerHeight / 2) + (targetHeight / 2);
+        
+        container.scrollTo({
+          top: scrollTo,
+          behavior: 'smooth'
+        });
+      }, 600);
+      return () => clearTimeout(timeout);
+    }
+  }, [lbLoading, leaderboard]);
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -422,7 +457,11 @@ const WorkProgressBar = ({ settings, todayAttendance }) => {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto" style={{ maxHeight: '340px' }}>
+          <div 
+            ref={leaderboardContainerRef}
+            className="flex-1 overflow-y-auto scroll-smooth" 
+            style={{ maxHeight: '340px' }}
+          >
             {lbLoading ? (
               <div className="px-6 py-10 text-center text-gray-400 text-sm">Loading leaderboard...</div>
             ) : leaderboard.length === 0 ? (
@@ -435,6 +474,7 @@ const WorkProgressBar = ({ settings, todayAttendance }) => {
                   return (
                     <div
                       key={entry.rank}
+                      ref={entry.isSelf ? selfRankRef : null}
                       className={`flex items-center gap-3 px-5 py-3 transition-colors ${
                         entry.isSelf ? 'bg-indigo-50/60 border-l-4 border-indigo-400'
                         : isTop3 ? 'bg-gray-50/50'

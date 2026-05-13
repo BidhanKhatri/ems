@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { toast } from 'sonner';
-import { Mail, ArrowLeft, ShieldQuestion } from 'lucide-react';
+import { Mail, ArrowLeft } from 'lucide-react';
+import logo from '../assets/ems-logo.png';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -30,8 +31,8 @@ const ForgotPassword = () => {
         
         {/* Header Section */}
         <div className="p-8 text-center bg-white/20">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-200">
-            <ShieldQuestion className="w-8 h-8 text-white" />
+          <div className="w-24 h-24 flex items-center justify-center mx-auto mb-6 rounded-xl bg-white shadow-sm border border-gray-100 overflow-hidden p-1">
+            <img src={logo} alt="EMS Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 tracking-tight mb-2">Forgot Password?</h1>
           <p className="text-sm text-gray-500 max-w-[260px] mx-auto leading-relaxed">

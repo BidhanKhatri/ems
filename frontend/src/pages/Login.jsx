@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { toast } from 'sonner';
-import { Mail, Lock, LogIn, Shield } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import FloatingInput from '../components/FloatingInput';
+import logo from '../assets/ems-logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -19,7 +20,7 @@ const Login = () => {
     try {
       const user = await login(email, password);
       toast.success('Logged in successfully');
-      
+
       // Show premium loader transition
       setIsLoading(true);
       setTimeout(() => {
@@ -84,8 +85,8 @@ const Login = () => {
 
         {/* Right Panel */}
         <div className="flex flex-col items-center justify-center w-full md:w-1/2 p-10 bg-white/10 backdrop-blur-sm">
-          <div className="w-10 h-10 rounded-full border border-indigo-200 bg-white flex items-center justify-center mb-4 shadow-sm">
-            <Shield className="w-5 h-5 text-indigo-500" />
+          <div className="w-24 h-24 flex items-center justify-center mb-6 rounded-2xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden p-2 group transition-transform hover:scale-105">
+            <img src={logo} alt="EMS Logo" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-8">Sign in</h2>
 
@@ -98,7 +99,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            
+
             <FloatingInput
               label="Password"
               icon={Lock}

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-import { Shield, Clock, XCircle, Mail, Phone, LogOut } from 'lucide-react';
+import { Clock, XCircle, Mail, Phone, LogOut } from 'lucide-react';
+import logo from '../assets/ems-logo.png';
 
 const ApprovalStatus = () => {
   const { user, logout } = useAuthStore();
@@ -68,7 +69,7 @@ const ApprovalStatus = () => {
         
         <div className="bg-gray-50/50 px-8 py-4 border-t border-gray-100 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
            <div className="flex items-center gap-2">
-             <Shield className="w-3.5 h-3.5" />
+             <img src={logo} alt="EMS Logo" className="w-8 h-8 object-contain rounded-xl" />
              <span>EMS Secure Portal</span>
            </div>
            <span>v2.4.0</span>

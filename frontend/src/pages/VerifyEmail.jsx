@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { toast } from 'sonner';
-import { ShieldCheck, ArrowLeft, RefreshCw, Timer } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Timer } from 'lucide-react';
+import logo from '../assets/ems-logo.png';
 
 const VerifyEmail = () => {
   const location = useLocation();
@@ -133,9 +134,9 @@ const VerifyEmail = () => {
         
         {/* Header Section */}
         <div className="p-8 text-center bg-white/20">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-200">
-            <ShieldCheck className="w-8 h-8 text-white" />
-          </div>
+          <div className="w-24 h-24 flex items-center justify-center mx-auto mb-6 rounded-xl bg-white shadow-sm border border-gray-100 overflow-hidden p-1">
+            <img src={logo} alt="EMS Logo" className="w-full h-full object-contain" />
+           </div>
           <h1 className="text-2xl font-bold text-gray-800 tracking-tight mb-2">Verify Account</h1>
           <p className="text-sm text-gray-500 max-w-[240px] mx-auto leading-relaxed">
             We've sent a 4-digit code to <span className="font-semibold text-indigo-600">{email}</span>

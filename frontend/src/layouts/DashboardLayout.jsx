@@ -1,8 +1,9 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
-import { LogOut, Home, Users, CheckSquare, Shield, Settings, ChevronLeft, ChevronRight, UserCircle2, BellRing, Menu, X, Calendar, ClipboardList, Clock, ChevronDown } from 'lucide-react';
+import { LogOut, Home, Users, CheckSquare, Settings, ChevronLeft, ChevronRight, UserCircle2, BellRing, Menu, X, Calendar, ClipboardList, Clock, ChevronDown } from 'lucide-react';
 import api from '../services/api';
+import logo from '../assets/ems-logo.png';
 
 const DashboardLayout = () => {
   const { user, logout } = useAuthStore();
@@ -239,8 +240,8 @@ const DashboardLayout = () => {
         >
           {/* Logo / Brand */}
           <div className={`flex items-center px-3 py-5 border-b relative ${isAdmin ? 'border-gray-100' : 'border-stone-100'}`} style={{ minHeight: 68 }}>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md ${theme.logoContainer}`}>
-              <Shield className={`w-4 h-4 ${theme.logoIcon}`} />
+            <div className={`${collapsed ? 'w-8 h-8' : 'w-12 h-12'} transition-all duration-300 flex items-center justify-center flex-shrink-0`}>
+              <img src={logo} alt="EMS Logo" className="w-full h-full object-contain" />
             </div>
             <div className={`label-transition ml-3 ${collapsed ? 'opacity-0 w-0 ml-0' : 'opacity-100 w-auto'}`}>
               <p className={`text-[13px] font-bold tracking-tight leading-tight ${theme.portalTitle}`}>
@@ -421,8 +422,8 @@ const DashboardLayout = () => {
         <div className={`sm:hidden mobile-sidebar-panel flex flex-col ${isMobileMenuOpen ? 'active' : ''} ${theme.sidebarBg}`}>
           <div className={`flex items-center justify-between px-4 py-5 border-b ${isAdmin ? 'border-gray-100' : 'border-stone-100'}`}>
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-md ${theme.logoContainer}`}>
-                <Shield className={`w-4 h-4 ${theme.logoIcon}`} />
+              <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                <img src={logo} alt="EMS Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <p className={`text-[13px] font-bold tracking-tight leading-tight ${theme.portalTitle}`}>
@@ -443,7 +444,7 @@ const DashboardLayout = () => {
             {getLinks().map((item) => {
               const isApprovalsPath = location.pathname.startsWith('/admin/approvals');
               const active = item.hasSubmenu ? isApprovalsPath : location.pathname === item.path;
-              
+
               if (item.hasSubmenu) {
                 const isOpen = isApprovalsOpen;
                 return (
@@ -466,12 +467,12 @@ const DashboardLayout = () => {
                         <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                       </div>
                     </button>
-                    
+
                     {isOpen && (
                       <div className="ml-8 border-l border-gray-100 pl-4 space-y-1 py-1">
                         {item.subItems.map((sub) => {
-                           const subActive = location.pathname === sub.path.split('?')[0] && (sub.path.includes('?') ? location.search.includes(sub.path.split('?')[1]) : !location.search);
-                           return (
+                          const subActive = location.pathname === sub.path.split('?')[0] && (sub.path.includes('?') ? location.search.includes(sub.path.split('?')[1]) : !location.search);
+                          return (
                             <Link
                               key={sub.name}
                               to={sub.path}
@@ -488,7 +489,7 @@ const DashboardLayout = () => {
                                 </span>
                               )}
                             </Link>
-                           );
+                          );
                         })}
                       </div>
                     )}
@@ -561,7 +562,7 @@ const DashboardLayout = () => {
                 <Menu className={`w-6 h-6 ${theme.headerIcon}`} />
               </button>
               <div className="flex items-center gap-2">
-                <Shield className={`w-5 h-5 ${theme.headerIcon}`} />
+                <img src={logo} alt="EMS Logo" className="w-8 h-8 object-contain" />
                 <span className={`font-bold text-base tracking-tight ${theme.headerTitleText}`}>EMS Portal</span>
               </div>
             </div>

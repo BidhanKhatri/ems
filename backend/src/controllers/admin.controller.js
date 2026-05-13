@@ -124,3 +124,22 @@ export const updateAccountApprovalStatus = catchAsync(async (req, res) => {
     user
   });
 });
+
+export const sendBroadcastNotification = catchAsync(async (req, res) => {
+  const { audience, title, message: body, metadata } = req.body;
+  
+  if (!title || !body) {
+    return res.status(400).send({ message: 'Title and message are required' });
+  }
+
+  const { sendBroadcast } = await import('../services/pushNotification.service.js');
+  
+  const success = await sendBroadcast(audience || 'EMPLOYEE', title, body, metadata);
+  
+  if (!success) {
+    return res.status(500).send({ message: 'Failed to send broadcast notification' });
+  }
+
+  res.status(200).send({ message: 'Broadcast notification sent successfully' });
+});
+

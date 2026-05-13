@@ -251,7 +251,7 @@ const AdminScheduling = () => {
         <div className="flex items-center justify-between w-full lg:w-auto">
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-indigo-50">
-               <Calendar className="w-4 h-4" />
+              <Calendar className="w-4 h-4" />
             </div>
             <div>
               <h1 className="text-[12px] font-black text-gray-900 leading-none">Shifts</h1>
@@ -310,20 +310,20 @@ const AdminScheduling = () => {
           {selectedEmployee && (
             <div className="flex items-center gap-2 pl-2 sm:pl-3 sm:border-l border-gray-100 shrink-0">
               <div className="w-8 h-8 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 overflow-hidden shadow-sm">
-                 {employees.find(e => e._id === selectedEmployee)?.profilePicture ? (
-                   <img src={employees.find(e => e._id === selectedEmployee).profilePicture} className="w-full h-full object-cover" />
-                 ) : (
-                   employees.find(e => e._id === selectedEmployee)?.name?.[0]
-                 )}
+                {employees.find(e => e._id === selectedEmployee)?.profilePicture ? (
+                  <img src={employees.find(e => e._id === selectedEmployee).profilePicture} className="w-full h-full object-cover" />
+                ) : (
+                  employees.find(e => e._id === selectedEmployee)?.name?.[0]
+                )}
               </div>
               <div className="flex flex-col min-w-0">
-               <h2 className="text-[10px] font-black text-gray-900 leading-none mb-1 truncate max-w-[100px] sm:max-w-[150px]">
-                 {employees.find(e => e._id === selectedEmployee)?.name}
-               </h2>
-               <p className="text-[8px] text-indigo-500 font-bold leading-none truncate max-w-[100px] sm:max-w-[150px]">
-                 {employees.find(e => e._id === selectedEmployee)?.email?.toLowerCase()}
-               </p>
-            </div>
+                <h2 className="text-[10px] font-black text-gray-900 leading-none mb-1 truncate max-w-[100px] sm:max-w-[150px]">
+                  {employees.find(e => e._id === selectedEmployee)?.name}
+                </h2>
+                <p className="text-[8px] text-indigo-500 font-bold leading-none truncate max-w-[100px] sm:max-w-[150px]">
+                  {employees.find(e => e._id === selectedEmployee)?.email?.toLowerCase()}
+                </p>
+              </div>
             </div>
           )}
 
@@ -374,7 +374,13 @@ const AdminScheduling = () => {
               eventDrop={handleEventDrop}
               allDaySlot={false}
               timeZone="local"
-              height="70vh"
+              height="75vh"
+              scrollTime="09:00:00"
+              slotMinTime="00:00:00"
+              slotMaxTime="24:00:00"
+              expandRows={true}
+              stickyHeaderDates={true}
+              handleWindowResize={true}
               eventTimeFormat={{
                 hour: 'numeric',
                 minute: '2-digit',
@@ -564,17 +570,45 @@ const AdminScheduling = () => {
           transform: scale(1.02);
           z-index: 10 !important;
         }
-        /* Mobile specific toolbar stacking */
+        /* Mobile specific toolbar compact single row */
         @media (max-width: 640px) {
           .fc-header-toolbar {
-            flex-direction: column;
-            gap: 10px;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 2px !important;
+            margin-bottom: 1rem !important;
           }
           .fc-toolbar-chunk {
-            display: flex;
-            justify-content: center;
-            width: 100%;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1px !important;
           }
+          .fc-toolbar-title {
+            font-size: 0.6rem !important;
+            font-weight: 900 !important;
+            white-space: nowrap !important;
+            margin: 0 4px !important;
+            text-transform: uppercase !important;
+            letter-spacing: -0.02em !important;
+          }
+          .fc .fc-button {
+            padding: 3px 5px !important;
+            font-size: 7px !important;
+            height: auto !important;
+          }
+          .fc-header-toolbar > * {
+            flex-shrink: 1;
+          }
+        }
+        /* Ensure vertical scrollbar is always accessible */
+        .calendar-container .fc-scroller-vertical {
+          overflow-y: auto !important;
+        }
+        .calendar-container .fc-timegrid-slot {
+          height: 3rem !important; /* Make slots a bit taller for easier scrolling/viewing */
         }
       `}</style>
     </div>

@@ -22,6 +22,7 @@
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
+    "firebase-admin": "^13.9.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.4.1",
@@ -30,6 +31,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.5",
     "nodemon": "^3.1.14",
+    "socket.io": "^4.8.3",
     "zod": "^4.3.6"
   }
 }

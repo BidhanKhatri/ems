@@ -3,7 +3,8 @@ import {
   getDashboard, getApprovals, approveRequest,
   getUsers, removeUser, toggleUserStatus,
   submitEmployeeFeedback, getEmployeeAttendance,
-  getAccountApprovals, updateAccountApprovalStatus
+  getAccountApprovals, updateAccountApprovalStatus,
+  sendBroadcastNotification
 } from '../controllers/admin.controller.js';
 import { requireAuth, requireRole } from '../middlewares/auth.middleware.js';
 import { upload } from '../config/cloudinary.js';
@@ -27,5 +28,8 @@ router.get('/users/:id/attendance', getEmployeeAttendance);
 // Account Approvals
 router.get('/account-approvals', getAccountApprovals);
 router.patch('/account-approvals/:id', updateAccountApprovalStatus);
+
+// Notifications
+router.post('/notifications/broadcast', sendBroadcastNotification);
 
 export default router;

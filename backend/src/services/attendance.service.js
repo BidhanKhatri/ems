@@ -4,6 +4,8 @@ import ApprovalRequest from '../models/ApprovalRequest.js';
 import PerformanceLog from '../models/PerformanceLog.js';
 import ApiError from '../utils/ApiError.js';
 import { sendEmail } from '../utils/mailer.js';
+import { sendToAdmins } from './pushNotification.service.js';
+import { getIO } from '../socket.js';
 import { addMinutes, differenceInMinutes, format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 
@@ -200,11 +202,30 @@ export const checkIn = async (userId) => {
         sendEmail({ to: settings.approvalNotificationEmail, subject, html }).catch(err => {
           console.error('Failed to send approval notification email:', err);
         });
+        
+        sendToAdmins(
+          'Late Check-In Request', 
+          `${user.name} requires approval for late check-in at ${checkInTimeStr}.`,
+          { type: 'APPROVAL_REQUEST', userId: user._id.toString() }
+        ).catch(err => console.error('Push notification failed:', err));
       }
+    } else {
+      // Normal check in notification
+      const user = await User.findById(userId).session(session);
+      const checkInTimeStr = formatInTimeZone(now, NEPAL_TZ, 'hh:mm a');
+      sendToAdmins(
+        'Employee Checked In', 
+        `${user.name} checked in at ${checkInTimeStr}.`,
+        { type: 'ATTENDANCE_CHECKIN', userId: user._id.toString() }
+      ).catch(err => console.error('Push notification failed:', err));
     }
 
     await session.commitTransaction();
     session.endSession();
+
+    // Notify admins of dashboard update
+    getIO().emit('admin:dashboard-update', { userId });
+    getIO().emit('leaderboard:update');
 
     return attendance[0];
   } catch (error) {
@@ -228,6 +249,14 @@ export const checkOut = async (userId) => {
   }
 
   attendance.checkOutTime = now;
+  const checkOutTimeStr = formatInTimeZone(now, NEPAL_TZ, 'hh:mm a');
+
+  const user = await User.findById(userId);
+  sendToAdmins(
+    'Employee Checked Out', 
+    `${user.name} checked out at ${checkOutTimeStr}.`,
+    { type: 'ATTENDANCE_CHECKOUT', userId: user._id.toString() }
+  ).catch(err => console.error('Push notification failed:', err));
 
   const settings = await getSettings();
   const scheduledCheckout = getScheduledDateTime(now, settings.checkOutTime);
@@ -259,6 +288,10 @@ export const checkOut = async (userId) => {
     nextActivityDueAt: null,
     lastActivityPromptAt: null,
   });
+
+  // Notify admins of dashboard update
+  getIO().emit('admin:dashboard-update', { userId });
+  getIO().emit('leaderboard:update');
 
   return attendance;
 };

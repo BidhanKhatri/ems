@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import api from '../services/api';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { formatTime, formatSimpleTime } from '../utils/formatDate';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SlideButton from '../components/SlideButton';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, isValid } from 'date-fns';
+import { useSocket } from '../context/SocketContext';
 
 let lastDevInitAt = 0;
 
@@ -27,32 +28,23 @@ const EmployeeDashboard = () => {
   const [selfRank, setSelfRank] = useState(null);
   const [lbLoading, setLbLoading] = useState(true);
 
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      const now = Date.now();
-      if (now - lastDevInitAt < 1500) return;
-      lastDevInitAt = now;
-    }
-    fetchTodayData();
-    fetchPerformanceData();
-    fetchLeaderboard();
-    fetchLatestProfile();
-  }, []);
+  const { socket } = useSocket();
 
-  const fetchLatestProfile = async () => {
+  const fetchLatestProfile = useCallback(async () => {
     try {
       const { data } = await api.get('/users/profile');
       if (data) setUser(data);
     } catch (error) {
       console.error('Failed to sync profile', error);
     }
-  };
+  }, [setUser]);
 
-  const fetchTodayData = async () => {
+  const fetchTodayData = useCallback(async () => {
     try {
+      const t = Date.now();
       const [statusRes, settingsRes] = await Promise.all([
-        api.get('/settings/today-status'),
-        api.get('/settings')
+        api.get(`/settings/today-status?t=${t}`),
+        api.get(`/settings?t=${t}`)
       ]);
       setTodayStatus(statusRes.data);
       setSettings(settingsRes.data);
@@ -67,9 +59,9 @@ const EmployeeDashboard = () => {
     } catch (error) {
       console.error(error);
     }
-  };
+  }, []);
 
-  const fetchPerformanceData = async () => {
+  const fetchPerformanceData = useCallback(async () => {
     try {
       const { data } = await api.get('/attendance/performance');
       setPerformanceLogs(Array.isArray(data) ? data : []);
@@ -77,9 +69,9 @@ const EmployeeDashboard = () => {
       console.error('Failed to grab performance', error);
       setPerformanceLogs([]);
     }
-  };
+  }, []);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       const { data } = await api.get('/attendance/leaderboard');
       setLeaderboard(data.leaderboard || []);
@@ -89,7 +81,45 @@ const EmployeeDashboard = () => {
     } finally {
       setLbLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const now = Date.now();
+      if (now - lastDevInitAt < 1500) return;
+      lastDevInitAt = now;
+    }
+    fetchTodayData();
+    fetchPerformanceData();
+    fetchLeaderboard();
+    fetchLatestProfile();
+  }, [fetchTodayData, fetchPerformanceData, fetchLeaderboard, fetchLatestProfile]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleSettingsUpdate = (newSettings) => {
+      if (newSettings) {
+        setSettings(newSettings);
+      }
+      fetchTodayData();
+    };
+
+    const handleLeaderboardUpdate = () => {
+      console.log('Real-time leaderboard update received');
+      fetchLeaderboard();
+      fetchLatestProfile(); // Banner score might have changed
+      fetchPerformanceData(); // Points trend might have changed
+    };
+
+    socket.on('settings:update', handleSettingsUpdate);
+    socket.on('leaderboard:update', handleLeaderboardUpdate);
+
+    return () => {
+      socket.off('settings:update', handleSettingsUpdate);
+      socket.off('leaderboard:update', handleLeaderboardUpdate);
+    };
+  }, [socket, fetchTodayData, fetchLeaderboard, fetchLatestProfile, fetchPerformanceData]);
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -605,7 +635,7 @@ const WorkProgressBar = ({ settings, todayAttendance }) => {
               <button
                 onClick={() => handleCheckOut(true)}
                 disabled={loading}
-                className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white font-bold text-sm hover:bg-gray-900 shadow-lg shadow-gray-200 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loading ? 'Processing...' : 'Confirm Early Check-out'}
               </button>

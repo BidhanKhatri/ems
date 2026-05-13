@@ -71,34 +71,36 @@ const WorkSchedule = () => {
         <div className="absolute top-0 right-0 -translate-y-8 translate-x-8 opacity-20 pointer-events-none">
           <svg width="80" height="80" viewBox="0 0 200 200" fill="none" className="sm:w-[120px] sm:h-[120px]"><circle cx="100" cy="100" r="100" fill="#e0e7ff" /></svg>
         </div>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 rounded-xl sm:rounded-xl flex items-center justify-center text-indigo-700 shadow-sm border border-white">
-               <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
+
+        <div className="flex items-center justify-between gap-4 relative z-10">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-indigo-100 rounded-lg sm:rounded-xl flex items-center justify-center text-indigo-700 shadow-sm border border-white shrink-0">
+              <Calendar className="w-4.5 h-4.5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-gray-800 tracking-tight">Work Schedule</h1>
-              <p className="hidden xs:block text-[10px] sm:text-xs text-gray-500 font-medium italic mt-0.5">Stay on track with your shifts</p>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-xl font-black text-gray-800 tracking-tight truncate">Work Schedule</h1>
+              <p className="hidden xs:block text-[8px] sm:text-xs text-gray-500 font-medium italic mt-0.5 truncate">Stay on track with your shifts</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Timezone Toggle */}
-            <div className="flex items-center bg-gray-100 border border-gray-200 rounded-xl p-0.5 sm:p-1 shadow-inner">
+            <div className="flex items-center bg-gray-100 border border-gray-200 rounded-lg sm:rounded-xl p-0.5 shadow-inner">
               <button
                 onClick={() => setViewTimezone('NPT')}
-                className={`flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[9px] sm:text-[10px] font-black tracking-widest uppercase transition-all ${viewTimezone === 'NPT' ? 'bg-white text-indigo-800 shadow-sm border border-gray-200' : 'text-gray-500'}`}
+                className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black tracking-widest uppercase transition-all ${viewTimezone === 'NPT' ? 'bg-white text-indigo-800 shadow-sm border border-gray-200' : 'text-gray-500'}`}
               >
-                <Globe className="w-3 h-3" />
-                NEPAL
+                <Globe className="w-2.5 h-2.5 sm:w-3 h-3" />
+                <span className="hidden xs:inline">NEPAL</span>
+                <span className="xs:hidden">NPT</span>
               </button>
               <button
                 onClick={() => setViewTimezone('US')}
-                className={`flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[9px] sm:text-[10px] font-black tracking-widest uppercase transition-all ${viewTimezone === 'US' ? 'bg-white text-indigo-800 shadow-sm border border-gray-200' : 'text-gray-500'}`}
+                className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-2 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black tracking-widest uppercase transition-all ${viewTimezone === 'US' ? 'bg-white text-indigo-800 shadow-sm border border-gray-200' : 'text-gray-500'}`}
               >
-                <Globe className="w-3 h-3" />
-                US EST
+                <Globe className="w-2.5 h-2.5 sm:w-3 h-3" />
+                <span className="hidden xs:inline">US EST</span>
+                <span className="xs:hidden">EST</span>
               </button>
             </div>
           </div>
@@ -117,7 +119,7 @@ const WorkSchedule = () => {
             {!loading && schedules.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-40 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200">
                 <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center mb-4">
-                   <Clock className="w-8 h-8 text-gray-300" />
+                  <Clock className="w-8 h-8 text-gray-300" />
                 </div>
                 <h3 className="text-lg font-black text-gray-800 tracking-tight">No Schedule Assigned</h3>
                 <p className="text-xs text-gray-500 font-medium max-w-[240px] mx-auto mt-2 leading-relaxed">
@@ -139,7 +141,13 @@ const WorkSchedule = () => {
                 selectable={false}
                 allDaySlot={false}
                 timeZone="local"
-                height="auto"
+                height="75vh"
+                scrollTime="09:00:00"
+                slotMinTime="00:00:00"
+                slotMaxTime="24:00:00"
+                expandRows={true}
+                stickyHeaderDates={true}
+                handleWindowResize={true}
                 eventTimeFormat={{
                   hour: 'numeric',
                   minute: '2-digit',
@@ -273,17 +281,41 @@ const WorkSchedule = () => {
           border-color: #ef4444 !important;
           background-color: #ef4444 !important;
         }
-        /* Mobile specific toolbar stacking */
+        /* Mobile specific toolbar compact single row */
         @media (max-width: 640px) {
           .fc-header-toolbar {
-            flex-direction: column;
-            gap: 12px;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 2px !important;
+            margin-bottom: 1rem !important;
           }
           .fc-toolbar-chunk {
-            display: flex;
-            justify-content: center;
-            width: 100%;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1px !important;
           }
+          .fc-toolbar-title {
+            font-size: 0.6rem !important;
+            font-weight: 900 !important;
+            white-space: nowrap !important;
+            margin: 0 4px !important;
+            text-transform: uppercase !important;
+            letter-spacing: -0.02em !important;
+          }
+          .fc .fc-button {
+            padding: 3px 5px !important;
+            font-size: 7px !important;
+            height: auto !important;
+          }
+          .fc-header-toolbar > * {
+            flex-shrink: 1;
+          }
+        }
+        .calendar-container .fc-timegrid-slot {
+          height: 3rem !important; /* Make slots a bit taller for easier scrolling/viewing */
         }
       `}</style>
     </div>

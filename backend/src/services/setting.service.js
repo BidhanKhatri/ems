@@ -3,6 +3,7 @@ import Holiday from '../models/Holiday.js';
 import Attendance from '../models/Attendance.js';
 import User from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
+import { getIO } from '../socket.js';
 import { addMinutes, startOfDay, endOfDay, isWeekend, parseISO, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
@@ -74,6 +75,12 @@ export const updateSettings = async (data) => {
     }
   }
 
+  // Notify clients of settings update after a short delay to ensure DB consistency across all instances
+  setTimeout(() => {
+    getIO().emit('settings:update', settings);
+    getIO().emit('admin:dashboard-update');
+  }, 100);
+
   return settings;
 };
 
@@ -105,11 +112,22 @@ export const createHoliday = async (title, startDateStr, endDateStr, adminId) =>
     }
   });
 
+  // Notify clients of settings update after a short delay
+  setTimeout(() => {
+    getIO().emit('settings:update');
+  }, 100);
+
   return holiday;
 };
 
 export const deleteHoliday = async (id) => {
   await Holiday.findByIdAndDelete(id);
+
+  // Notify clients of settings update after a short delay
+  setTimeout(() => {
+    getIO().emit('settings:update');
+  }, 100);
+
   return true;
 };
 

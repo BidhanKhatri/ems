@@ -392,4 +392,9 @@ export const processOverdueActivitySessions = async () => {
 
     // WhatsApp alerts intentionally disabled for now to keep production flow stable.
   }
+
+  if (overdueUsers.length > 0) {
+    getIO().emit('admin:dashboard-update');
+    getIO().emit('leaderboard:update');
+  }
 };

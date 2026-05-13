@@ -54,3 +54,4 @@ backend/node_modules/
 # Misc
 # =====================
 coverage/
+backend/ems-notification-firebase-adminsdk.json

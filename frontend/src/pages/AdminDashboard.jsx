@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
+import { useSocket } from '../context/SocketContext';
 import {
   Users, AlertCircle, CalendarCheck, Trophy, TrendingUp, TrendingDown,
   BarChart2, X, Mail, Star, Calendar, Search, ChevronLeft, ChevronRight,
@@ -307,10 +308,11 @@ const AdminDashboard = () => {
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchStats = async (isManual = false) => {
+  const fetchStats = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const { data } = await api.get('/admin/dashboard');
+      const t = Date.now();
+      const { data } = await api.get(`/admin/dashboard?t=${t}`);
       setStats(data);
       if (isManual) toast.success('Dashboard data synchronized');
     } catch (error) {
@@ -319,11 +321,28 @@ const AdminDashboard = () => {
     } finally {
       if (isManual) setRefreshing(false);
     }
-  };
+  }, []);
+
+  const { socket } = useSocket();
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
+
+  // Listen for real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      fetchStats();
+    };
+
+    socket.on('admin:dashboard-update', handleUpdate);
+
+    return () => {
+      socket.off('admin:dashboard-update', handleUpdate);
+    };
+  }, [socket, fetchStats]);
 
   const filteredLeaderboard = useMemo(() => {
     if (!stats) return [];

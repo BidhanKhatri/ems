@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema(
     performanceScore: { type: Number, default: 0 },
     totalPoints: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    fcmTokens: [{ type: String }],
     otp: { type: String },
     otpExpiresAt: { type: Date },
     resetPasswordOtp: { type: String },

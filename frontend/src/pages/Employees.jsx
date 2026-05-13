@@ -138,7 +138,7 @@ const Employees = () => {
               className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm outline-none"
             />
           </div>
-          <button className="p-2 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 text-gray-600 transition-colors">
+          <button className="p-2 border border-indigo-200 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors shadow-sm">
             <FilterIcon className="w-4 h-4" />
           </button>
         </div>

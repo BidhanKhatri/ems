@@ -10,6 +10,8 @@ import ApiError from './utils/ApiError.js';
 import initCronJobs from './jobs/employeeOfMonth.job.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { init as initSocket } from './socket.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +27,10 @@ import userRoutes from './routes/user.routes.js';
 
 // app setup
 const app = express();
+const server = createServer(app);
+
+// Initialize Socket.io
+initSocket(server);
 
 // Connect to MongoDB
 connectDB();
@@ -79,6 +85,6 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });

@@ -11,4 +11,8 @@ router.get('/profile', userController.getProfile);
 router.post('/profile/picture', upload.single('image'), userController.updateProfilePicture);
 router.delete('/profile/picture', userController.deleteProfilePicture);
 
+// FCM Token routes
+router.post('/fcm-token', userController.registerFcmToken);
+router.delete('/fcm-token', userController.removeFcmToken);
+
 export default router;

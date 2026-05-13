@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 import { formatDate, formatTime } from '../utils/formatDate';
 import {
   Calendar, ChevronLeft, ChevronRight, Clock, LogIn, LogOut,
-  TrendingUp, TrendingDown, Filter, X, History, Search, Users, ChevronDown
+  TrendingUp, TrendingDown, Filter, X, History, Search, Users, ChevronDown, Download
 } from 'lucide-react';
+import DownloadAttendanceModal from '../components/DownloadAttendanceModal';
 
 /* ── Custom Date Picker Button ── */
 const fmt = (iso) =>
@@ -91,6 +93,7 @@ const AdminAttendance = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Fetch all employees once
   useEffect(() => {
@@ -110,29 +113,51 @@ const AdminAttendance = () => {
     load();
   }, []);
 
+  const fetchAttendance = useCallback(async () => {
+    if (!selectedEmp) return;
+    setRecLoading(true);
+    try {
+      const t = Date.now();
+      const { data } = await api.get(`/admin/users/${selectedEmp._id}/attendance`, {
+        params: { limit: 500, t }
+      });
+      const sorted = [...(data.records || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setRecords(sorted);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRecLoading(false);
+    }
+  }, [selectedEmp]);
+
   // Fetch attendance when selected employee changes
   useEffect(() => {
-    if (!selectedEmp) return;
-    const load = async () => {
-      setRecLoading(true);
-      try {
-        const { data } = await api.get(`/admin/users/${selectedEmp._id}/attendance`, {
-          params: { limit: 500 }
-        });
-        const sorted = [...(data.records || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-        setRecords(sorted);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setRecLoading(false);
-      }
-    };
-    load();
+    fetchAttendance();
     setStatusFilter('ALL');
     setDateFrom('');
     setDateTo('');
     setPage(1);
-  }, [selectedEmp]);
+  }, [fetchAttendance]);
+
+  const { socket } = useSocket();
+
+  // Real-time update listener
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = (data) => {
+      // If we have a specific userId in the update, only refresh if it matches selected
+      // Otherwise refresh all (fallback for other dashboard updates)
+      if (data?.userId && selectedEmp?._id !== data.userId) return;
+      fetchAttendance();
+    };
+
+    socket.on('admin:dashboard-update', handleUpdate);
+
+    return () => {
+      socket.off('admin:dashboard-update', handleUpdate);
+    };
+  }, [socket, fetchAttendance]);
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [statusFilter, dateFrom, dateTo]);
@@ -252,11 +277,18 @@ const AdminAttendance = () => {
             </div>
           </div>
           {!recLoading && selectedEmp && (
-            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0">
-              <span className="bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 font-bold text-gray-700 shrink-0">
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0">
+              <button
+                onClick={() => setShowDownloadModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-100 text-indigo-600 rounded-lg text-[10px] sm:text-xs font-bold hover:bg-indigo-50 transition-colors shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download PDF
+              </button>
+              <span className="bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-[10px] sm:text-xs font-bold text-gray-700 shrink-0">
                 {filteredRecs.length} logs
               </span>
-              <span className={`rounded-lg px-2 py-1 font-black border shrink-0 ${totalPoints >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+              <span className={`rounded-lg px-2 py-1 text-[10px] sm:text-xs font-black border shrink-0 ${totalPoints >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
                 {totalPoints > 0 ? '+' : ''}{totalPoints} pts
               </span>
             </div>
@@ -514,6 +546,14 @@ const AdminAttendance = () => {
           )}
         </div>
       </div>
+      {showDownloadModal && (
+        <DownloadAttendanceModal 
+          isOpen={showDownloadModal}
+          onClose={() => setShowDownloadModal(false)}
+          targetUser={selectedEmp}
+          isAdminView={true}
+        />
+      )}
     </div>
   );
 };

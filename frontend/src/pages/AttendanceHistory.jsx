@@ -3,8 +3,10 @@ import api from '../services/api';
 import { formatDate, formatTime } from '../utils/formatDate';
 import {
   Calendar, ChevronLeft, ChevronRight, Clock, LogIn, LogOut,
-  TrendingUp, TrendingDown, Filter, X, History
+  TrendingUp, TrendingDown, Filter, X, History, Download
 } from 'lucide-react';
+import useAuthStore from '../store/useAuthStore';
+import DownloadAttendanceModal from '../components/DownloadAttendanceModal';
 
 /* ── Custom Date Picker Button ── */
 const fmt = (iso) =>
@@ -77,6 +79,8 @@ const AttendanceHistory = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     const fetch = async () => {
@@ -136,11 +140,18 @@ const AttendanceHistory = () => {
           </div>
         </div>
         {!loading && (
-          <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0">
-            <span className="bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 font-bold text-gray-700 shrink-0">
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0">
+            <button
+              onClick={() => setShowDownloadModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-100 text-indigo-600 rounded-lg text-[10px] sm:text-xs font-bold hover:bg-indigo-50 transition-colors shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download PDF
+            </button>
+            <span className="bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-[10px] sm:text-xs font-bold text-gray-700 shrink-0">
               {filtered.length} logs
             </span>
-            <span className={`rounded-lg px-2 py-1 font-black border shrink-0 ${totalPoints >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            <span className={`rounded-lg px-2 py-1 text-[10px] sm:text-xs font-black border shrink-0 ${totalPoints >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
               {totalPoints > 0 ? '+' : ''}{totalPoints} pts
             </span>
           </div>
@@ -160,7 +171,7 @@ const AttendanceHistory = () => {
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
               className={`px-2.5 py-1.5 rounded-xl text-[9px] font-black border transition-all ${statusFilter === f.key
-                  ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
                   : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300'
                 }`}
             >
@@ -443,7 +454,7 @@ const AttendanceHistory = () => {
                           key={pg}
                           onClick={() => setPage(pg)}
                           className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${page === pg
-                            ? 'bg-gray-800 text-white shadow-sm'
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
                             : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                             }`}
                         >
@@ -465,6 +476,14 @@ const AttendanceHistory = () => {
           </>
         )}
       </div>
+      {showDownloadModal && (
+        <DownloadAttendanceModal 
+          isOpen={showDownloadModal}
+          onClose={() => setShowDownloadModal(false)}
+          targetUser={user}
+          isAdminView={false}
+        />
+      )}
     </div>
   );
 };

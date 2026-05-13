@@ -59,7 +59,7 @@ const ApprovalStatus = () => {
 
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-black transition-all active:scale-95 shadow-xl shadow-gray-200"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-100"
           >
             <LogOut className="w-4 h-4" />
             Sign Out & Re-login

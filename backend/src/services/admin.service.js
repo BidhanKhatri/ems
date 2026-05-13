@@ -7,6 +7,8 @@ import PerformanceLog from '../models/PerformanceLog.js';
 import ActivityLog from '../models/ActivityLog.js';
 import SystemSettings from '../models/SystemSettings.js';
 import ApiError from '../utils/ApiError.js';
+import { getIO } from '../socket.js';
+import { sendToUser } from './pushNotification.service.js';
 
 export const getDashboardStats = async () => {
   const totalEmployees = await User.countDocuments({ role: 'EMPLOYEE', approvalStatus: 'APPROVED' });
@@ -124,6 +126,16 @@ export const processApproval = async (requestId, adminId, isApproved) => {
     await session.commitTransaction();
     session.endSession();
 
+    // Trigger real-time update
+    getIO().emit('admin:dashboard-update');
+    getIO().emit('leaderboard:update');
+
+    sendToUser(
+      request.userId,
+      'Check-in Request Processed',
+      `Your late check-in request was ${isApproved ? 'Approved' : 'Rejected'} by Admin.`
+    ).catch(err => console.error('Push notification failed:', err));
+
     return request;
   } catch (error) {
     await session.abortTransaction();
@@ -234,6 +246,10 @@ export const processFeedback = async (userId, adminId, { text, points, imageUrl 
     await session.commitTransaction();
     session.endSession();
 
+    // Trigger real-time update
+    getIO().emit('admin:dashboard-update');
+    getIO().emit('leaderboard:update');
+
     // Send email outside of transaction (best-effort)
     const emailHtml = `
       <h2>New Feedback from Admin</h2>
@@ -248,6 +264,13 @@ export const processFeedback = async (userId, adminId, { text, points, imageUrl 
       subject: 'New Feedback from Administrator',
       html: emailHtml
     });
+    
+    sendToUser(
+      userId,
+      points !== 0 ? `Feedback Received (${points > 0 ? '+' : ''}${points} pts)` : 'Feedback Received',
+      text,
+      { type: 'FEEDBACK', feedbackId: feedback[0]._id.toString() }
+    ).catch(err => console.error('Push notification failed:', err));
 
     return {
       feedback: feedback[0],
@@ -300,5 +323,16 @@ export const updateAccountApprovalStatus = async (userId, status) => {
 
   user.approvalStatus = status;
   await user.save();
+
+  // Trigger real-time update
+  getIO().emit('admin:dashboard-update');
+  getIO().emit('leaderboard:update');
+
+  sendToUser(
+    userId,
+    'Account Status Updated',
+    `Your account has been ${status.toLowerCase()} by an administrator.`
+  ).catch(err => console.error('Push notification failed:', err));
+
   return user;
 };

@@ -54,3 +54,32 @@ export const deleteProfilePicture = catchAsync(async (req, res) => {
 
   res.status(200).send({ message: 'Profile picture removed successfully' });
 });
+
+export const registerFcmToken = catchAsync(async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).send({ message: 'FCM token is required' });
+
+  const user = await User.findById(req.user.id);
+  if (!user.fcmTokens) user.fcmTokens = [];
+  
+  if (!user.fcmTokens.includes(token)) {
+    user.fcmTokens.push(token);
+    await user.save();
+  }
+
+  res.status(200).send({ message: 'FCM token registered successfully' });
+});
+
+export const removeFcmToken = catchAsync(async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).send({ message: 'FCM token is required' });
+
+  const user = await User.findById(req.user.id);
+  if (user.fcmTokens) {
+    user.fcmTokens = user.fcmTokens.filter(t => t !== token);
+    await user.save();
+  }
+
+  res.status(200).send({ message: 'FCM token removed successfully' });
+});
+

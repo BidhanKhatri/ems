@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthLayout from './layouts/AuthLayout';
 import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import PageLoader from './components/PageLoader';
 
 // Pages
 import Login from './pages/Login';
@@ -24,8 +26,24 @@ import Settings from './pages/Settings';
 import Employees from './pages/Employees';
 import AdminScheduling from './pages/AdminScheduling';
 import AdminAttendance from './pages/AdminAttendance';
+import useAuthStore from './store/useAuthStore';
 
 const App = () => {
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const { isLoading: globalLoading } = useAuthStore();
+
+  useEffect(() => {
+    // Simulate initial workspace initialization
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isInitialLoading || globalLoading) {
+    return <PageLoader />;
+  }
+
   return (
     <Router>
       <Routes>

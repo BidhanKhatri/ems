@@ -10,7 +10,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuthStore();
+  const { login, setIsLoading } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,11 +19,17 @@ const Login = () => {
     try {
       const user = await login(email, password);
       toast.success('Logged in successfully');
-      if (user.role === 'ADMIN') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      
+      // Show premium loader transition
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        if (user.role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 1500);
     } catch (error) {
       const msg = error.response?.data?.message || 'Login failed';
       toast.error(msg);

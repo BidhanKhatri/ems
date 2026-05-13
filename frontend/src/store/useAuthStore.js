@@ -25,6 +25,9 @@ const useAuthStore = create((set) => ({
   user: isValidToken ? JSON.parse(localStorage.getItem('user')) : null,
   token: isValidToken ? localStorage.getItem('token') : null,
   isAuthenticated: isValidToken,
+  isLoading: false,
+
+  setIsLoading: (loading) => set({ isLoading: loading }),
 
   setUser: (user) => {
     localStorage.setItem('user', JSON.stringify(user));

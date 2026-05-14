@@ -18,6 +18,7 @@ import Profile from './pages/Profile';
 import EmployeeNotifications from './pages/EmployeeNotifications';
 import WorkSchedule from './pages/WorkSchedule';
 import ApprovalStatus from './pages/ApprovalStatus';
+import Holidays from './pages/Holidays';
 import AdminDashboard from './pages/AdminDashboard';
 
 import Approvals from './pages/Approvals';
@@ -63,6 +64,7 @@ const App = () => {
             <Route path="/attendance" element={<AttendanceHistory />} />
             <Route path="/notifications" element={<EmployeeNotifications />} />
             <Route path="/schedule" element={<WorkSchedule />} />
+            <Route path="/holidays" element={<Holidays />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>

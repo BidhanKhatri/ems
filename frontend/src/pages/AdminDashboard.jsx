@@ -56,7 +56,7 @@ const PodiumCard = ({ user, index, onViewDetails }) => {
           </div>
           <div className={`flex-1 ${cfg.chipBg} border ${cfg.chipBorder} rounded-xl py-2 text-center`}>
             <p className={`text-lg font-extrabold ${cfg.chipText} tabular-nums leading-tight`}>{user.totalAttendance}</p>
-            <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold">Check-ins</p>
+            <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold">Days</p>
           </div>
         </div>
         <div className="flex items-center justify-between w-full gap-2">
@@ -562,18 +562,18 @@ const AdminDashboard = () => {
                       <div className="text-right">
                         <p className="text-sm font-black text-indigo-600 tabular-nums">{emp.performanceScore} pts</p>
                         <div className={`flex items-center justify-end gap-1 text-[10px] font-bold ${emp.trend > 0 ? 'text-emerald-500' : emp.trend < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                           {emp.trend > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : emp.trend < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : null}
-                           {emp.trend > 0 ? '+' : ''}{emp.trend}
+                          {emp.trend > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : emp.trend < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : null}
+                          {emp.trend > 0 ? '+' : ''}{emp.trend}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                       <button onClick={() => setSelectedEmployee(emp)} className="flex-1 py-2 bg-indigo-50 text-indigo-600 text-[11px] font-bold rounded-xl border border-indigo-100 flex items-center justify-center gap-1.5">
-                         <BarChart2 className="w-3.5 h-3.5" /> Stats
-                       </button>
-                       <button onClick={() => setFeedbackFor(emp._id)} className="flex-1 py-2 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center justify-center gap-1.5">
-                         <MessageSquarePlus className="w-3.5 h-3.5" /> Feedback
-                       </button>
+                      <button onClick={() => setSelectedEmployee(emp)} className="flex-1 py-2 bg-indigo-50 text-indigo-600 text-[11px] font-bold rounded-xl border border-indigo-100 flex items-center justify-center gap-1.5">
+                        <BarChart2 className="w-3.5 h-3.5" /> Stats
+                      </button>
+                      <button onClick={() => setFeedbackFor(emp._id)} className="flex-1 py-2 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center justify-center gap-1.5">
+                        <MessageSquarePlus className="w-3.5 h-3.5" /> Feedback
+                      </button>
                     </div>
                   </div>
                 );

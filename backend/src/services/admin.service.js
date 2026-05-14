@@ -86,7 +86,23 @@ export const getDashboardStats = async () => {
 };
 
 export const getPendingApprovals = async () => {
-  return await ApprovalRequest.find({ status: 'PENDING' }).populate('userId', 'name email profilePicture');
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  
+  // Permanently remove old pending requests from previous days
+  try {
+    await ApprovalRequest.deleteMany({
+      status: 'PENDING',
+      createdAt: { $lt: todayStart }
+    });
+  } catch (error) {
+    console.error('Failed to cleanup old approval requests:', error);
+  }
+
+  return await ApprovalRequest.find({ 
+    status: 'PENDING',
+    createdAt: { $gte: todayStart }
+  }).populate('userId', 'name email profilePicture');
 };
 
 export const processApproval = async (requestId, adminId, isApproved) => {

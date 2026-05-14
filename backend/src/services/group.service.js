@@ -40,7 +40,7 @@ export const deleteGroup = async (groupId) => {
 };
 
 export const getGroups = async () => {
-  return await Group.find().populate('employees', 'name email performanceScore totalPoints');
+  return await Group.find().populate('employees', 'name email performanceScore totalPoints profilePicture');
 };
 
 export const addMembers = async (groupId, userIds) => {
@@ -54,7 +54,7 @@ export const addMembers = async (groupId, userIds) => {
 
   await User.updateMany({ _id: { $in: newIds } }, { $set: { groupId: group._id } });
 
-  return await Group.findById(groupId).populate('employees', 'name email performanceScore totalPoints');
+  return await Group.findById(groupId).populate('employees', 'name email performanceScore totalPoints profilePicture');
 };
 
 export const removeMember = async (groupId, userId) => {
@@ -66,7 +66,7 @@ export const removeMember = async (groupId, userId) => {
 
   await User.findByIdAndUpdate(userId, { $set: { groupId: null } });
 
-  return await Group.findById(groupId).populate('employees', 'name email performanceScore totalPoints');
+  return await Group.findById(groupId).populate('employees', 'name email performanceScore totalPoints profilePicture');
 };
 
 export const broadcastEmail = async (groupId, { subject, message }) => {

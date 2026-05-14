@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BellRing, ImageIcon, X, ExternalLink } from 'lucide-react';
+import { BellRing, ImageIcon, X, ExternalLink, Mail, AlertCircle, CheckCircle2, Clock, Info } from 'lucide-react';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
 
@@ -62,6 +62,18 @@ const EmployeeNotifications = () => {
     }
   };
 
+  const getIcon = (n) => {
+    const type = n.metadata?.type;
+    const title = n.title?.toLowerCase() || '';
+
+    if (type === 'FEEDBACK' || title.includes('feedback')) return <Mail className="w-4 h-4 text-indigo-500" />;
+    if (title.includes('warning') || title.includes('caution')) return <AlertCircle className="w-4 h-4 text-amber-500" />;
+    if (title.includes('approved') || title.includes('success')) return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+    if (type === 'LATE_CHECKIN' || title.includes('check-in')) return <Clock className="w-4 h-4 text-indigo-500" />;
+
+    return <Info className="w-4 h-4 text-gray-400" />;
+  };
+
   return (
     <div className="space-y-6 pb-10">
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -106,10 +118,15 @@ const EmployeeNotifications = () => {
                 className={`rounded-xl border p-4 ${n.isRead ? 'bg-white border-gray-200' : 'bg-indigo-50/60 border-indigo-200'}`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{n.title}</p>
-                    <p className="text-xs text-gray-600 mt-1">{n.message}</p>
-                    <p className="text-[11px] text-gray-400 mt-2">{new Date(n.createdAt).toLocaleString()}</p>
+                  <div className="flex gap-4">
+                    <div className={`mt-1 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${n.isRead ? 'bg-gray-50 border border-gray-100' : 'bg-white border border-indigo-100'}`}>
+                      {getIcon(n)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold tracking-tight ${n.isRead ? 'text-gray-700' : 'text-indigo-900'}`}>{n.title}</p>
+                      <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">{n.message}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-wider">{new Date(n.createdAt).toLocaleString()}</p>
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {!n.isRead && (

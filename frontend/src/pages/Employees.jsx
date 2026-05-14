@@ -52,10 +52,7 @@ const Employees = () => {
 
 
   const handleToggleStatus = async (userId, bypass = false) => {
-    const userToToggle = users.find(u => u._id === userId);
-
-    // Only show confirmation when BLOCKING (deactivating)
-    if (userToToggle?.isActive && !bypass) {
+    if (bypass !== true) {
       setStatusConfirm(userId);
       return;
     }
@@ -349,8 +346,10 @@ const Employees = () => {
             <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
               <Trash2 className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 text-center">Permanently Delete?</h2>
-            <p className="text-gray-500 text-sm text-center mt-3 leading-relaxed">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 text-center leading-tight">
+              Permanently Delete <span className="text-red-600">"{users.find(u => u._id === deleteConfirm)?.name}"</span>?
+            </h2>
+            <p className="text-gray-500 text-xs sm:text-sm text-center mt-3 leading-relaxed">
               This action will remove all history and data associated with this employee. This cannot be undone.
             </p>
             <div className="flex gap-3 mt-8">
@@ -362,7 +361,7 @@ const Employees = () => {
               </button>
               <button
                 onClick={handleDeleteUser}
-                className="flex-1 px-4 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 shadow-lg shadow-red-200 transition-colors"
+                className="flex-1 px-4 py-3 rounded-2xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-all active:scale-[0.98]"
               >
                 Delete Record
               </button>
@@ -371,34 +370,46 @@ const Employees = () => {
         </div>
       )}
 
-      {/* Deactivate Confirmation Modal */}
-      {statusConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/10">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-6 mx-auto">
-              <ShieldAlert className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 text-center">Restrict Account?</h2>
-            <p className="text-gray-500 text-sm text-center mt-3 leading-relaxed">
-              This employee will no longer be able to log in to their dashboard. All their data will be preserved.
-            </p>
-            <div className="flex gap-3 mt-8">
-              <button
-                onClick={() => setStatusConfirm(null)}
-                className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleToggleStatus(statusConfirm, true)}
-                className="flex-1 px-4 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 shadow-lg shadow-red-200 transition-colors"
-              >
-                Restrict Access
-              </button>
+      {/* Account Status Toggle Modal */}
+      {statusConfirm && (() => {
+        const userToToggle = users.find(u => u._id === statusConfirm);
+        const isRestricting = userToToggle?.isActive;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/10">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+              <div className={`w-16 h-16 ${isRestricting ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500'} rounded-2xl flex items-center justify-center mb-6 mx-auto`}>
+                {isRestricting ? <ShieldAlert className="w-8 h-8" /> : <ShieldCheck className="w-8 h-8" />}
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 text-center leading-tight">
+                {isRestricting ? 'Restrict' : 'Activate'} Account <span className={isRestricting ? 'text-red-600' : 'text-emerald-600'}>"{userToToggle?.name}"</span>?
+              </h2>
+              <p className="text-gray-500 text-xs sm:text-sm text-center mt-3 leading-relaxed">
+                {isRestricting
+                  ? 'This employee will no longer be able to log in to their dashboard. All their data will be preserved.'
+                  : 'Access will be restored immediately, allowing the employee to log in and track their attendance again.'}
+              </p>
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setStatusConfirm(null)}
+                  className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleToggleStatus(statusConfirm, true)}
+                  className={`flex-1 px-4 py-3 rounded-2xl text-white font-bold text-sm transition-all active:scale-[0.98] ${isRestricting
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                    }`}
+                >
+                  {isRestricting ? 'Restrict Access' : 'Unrestrict Access'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Feedback Modal */}
       {feedbackModalFor && (

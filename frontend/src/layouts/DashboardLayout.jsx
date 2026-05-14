@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
-import { LogOut, Home, Users, CheckSquare, Settings, ChevronLeft, ChevronRight, UserCircle2, BellRing, Menu, X, Calendar, ClipboardList, Clock, ChevronDown } from 'lucide-react';
+import { LogOut, Home, Users, CheckSquare, Settings, ChevronLeft, ChevronRight, UserCircle2, BellRing, Menu, X, Calendar, ClipboardList, Clock, ChevronDown, CalendarRange } from 'lucide-react';
 import api from '../services/api';
 import logo from '../assets/ems-logo.png';
 import { useSocket } from '../context/SocketContext';
@@ -135,6 +135,7 @@ const DashboardLayout = () => {
       { name: 'Dashboard', path: '/dashboard', icon: <Home className="w-[18px] h-[18px] flex-shrink-0" /> },
       { name: 'Attendance', path: '/attendance', icon: <ClipboardList className="w-[18px] h-[18px] flex-shrink-0" /> },
       { name: 'Work Schedule', path: '/schedule', icon: <Calendar className="w-[18px] h-[18px] flex-shrink-0" /> },
+      { name: 'Holidays', path: '/holidays', icon: <CalendarRange className="w-[18px] h-[18px] flex-shrink-0" /> },
       { name: 'Notifications', path: '/notifications', icon: <BellRing className="w-[18px] h-[18px] flex-shrink-0" />, badge: unreadCount },
       { name: 'Profile', path: '/profile', icon: <UserCircle2 className="w-[18px] h-[18px] flex-shrink-0" /> },
     ];

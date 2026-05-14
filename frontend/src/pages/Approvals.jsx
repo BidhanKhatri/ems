@@ -22,6 +22,7 @@ const Approvals = () => {
   const [accountSearch, setAccountSearch] = useState('');
   
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, name, status }
+  const [confirmingCheckin, setConfirmingCheckin] = useState(null); // { id, name, isApproved }
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -96,6 +97,7 @@ const Approvals = () => {
     try {
       await api.post(`/admin/approve/${id}`, { isApproved });
       toast.success(`Check-in ${isApproved ? 'approved' : 'rejected'}`);
+      setConfirmingCheckin(null);
       fetchData();
     } catch (error) {
       toast.error('Action failed');
@@ -224,8 +226,8 @@ const Approvals = () => {
                           <p className="text-sm text-gray-600 font-medium max-w-sm truncate bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">{req.reason}</p>
                         </td>
                         <td className="px-8 py-6 text-right space-x-2">
-                           <button onClick={() => handleCheckinAction(req._id, true)} className="px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border border-emerald-100 shadow-sm">Approve</button>
-                           <button onClick={() => handleCheckinAction(req._id, false)} className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border border-red-100 shadow-sm">Reject</button>
+                           <button onClick={() => setConfirmingCheckin({ id: req._id, name: req.userId?.name, isApproved: true })} className="px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border border-emerald-100 shadow-sm">Approve</button>
+                           <button onClick={() => setConfirmingCheckin({ id: req._id, name: req.userId?.name, isApproved: false })} className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border border-red-100 shadow-sm">Reject</button>
                         </td>
                       </tr>
                     ))}
@@ -253,8 +255,8 @@ const Approvals = () => {
                        <p className="text-xs text-gray-600 font-medium leading-relaxed">{req.reason}</p>
                     </div>
                     <div className="flex gap-2">
-                       <button onClick={() => handleCheckinAction(req._id, true)} className="flex-1 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-emerald-100">Approve</button>
-                       <button onClick={() => handleCheckinAction(req._id, false)} className="flex-1 py-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-red-100">Reject</button>
+                       <button onClick={() => setConfirmingCheckin({ id: req._id, name: req.userId?.name, isApproved: true })} className="flex-1 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-emerald-100">Approve</button>
+                       <button onClick={() => setConfirmingCheckin({ id: req._id, name: req.userId?.name, isApproved: false })} className="flex-1 py-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-red-100">Reject</button>
                     </div>
                   </div>
                 ))}
@@ -450,6 +452,47 @@ const Approvals = () => {
                  <button
                    onClick={() => handleAccountAction(confirmingAction.userId, confirmingAction.status)}
                    className="py-3 px-4 rounded-xl bg-indigo-600 text-white font-bold text-[13px] hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+                 >
+                   Confirm
+                 </button>
+               </div>
+             </div>
+          </div>
+        </div>
+      )}
+      {confirmingCheckin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/20 backdrop-blur-[2px]">
+          <div className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 animate-in fade-in zoom-in duration-200">
+             <div className="flex flex-col items-center text-center">
+               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${
+                 confirmingCheckin.isApproved ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+               }`}>
+                 {confirmingCheckin.isApproved ? <CheckCircle2 className="w-7 h-7" /> : <XCircle className="w-7 h-7" />}
+               </div>
+               
+               <h3 className="text-xl font-bold text-gray-900 tracking-tight mb-2">
+                 {confirmingCheckin.isApproved ? 'Approve Late Arrival' : 'Reject Late Arrival'}
+               </h3>
+               
+               <div className="text-sm text-gray-500 font-medium leading-relaxed px-2">
+                  Are you sure you want to <span className={confirmingCheckin.isApproved ? "text-emerald-600 font-extrabold" : "text-red-600 font-extrabold"}>
+                    {confirmingCheckin.isApproved ? 'approve' : 'reject'}
+                  </span> the late check-in request for
+                  <p className="text-gray-900 font-extrabold text-base mt-1">{confirmingCheckin.name}</p>
+               </div>
+
+               <div className="grid grid-cols-2 gap-3 w-full mt-10">
+                 <button
+                   onClick={() => setConfirmingCheckin(null)}
+                   className="py-3 px-4 rounded-xl bg-gray-50 text-gray-500 font-bold text-[13px] hover:bg-gray-100 transition-all active:scale-95"
+                 >
+                   Cancel
+                 </button>
+                 <button
+                   onClick={() => handleCheckinAction(confirmingCheckin.id, confirmingCheckin.isApproved)}
+                   className={`py-3 px-4 rounded-xl text-white font-bold text-[13px] transition-all active:scale-95 shadow-lg ${
+                     confirmingCheckin.isApproved ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' : 'bg-red-600 hover:bg-red-700 shadow-red-100'
+                   }`}
                  >
                    Confirm
                  </button>

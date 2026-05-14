@@ -7,11 +7,15 @@ import {
 } from 'lucide-react';
 
 /* ── Avatar ── */
-const Avatar = ({ name }) => {
+const Avatar = ({ name, profilePicture }) => {
   const initials = name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
   return (
-    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-xs flex items-center justify-center flex-shrink-0 border border-primary/10">
-      {initials}
+    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-xs flex items-center justify-center flex-shrink-0 border border-primary/10 overflow-hidden">
+      {profilePicture ? (
+        <img src={profilePicture} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   );
 };
@@ -185,23 +189,21 @@ const AddMembersModal = ({ group, onClose, onUpdated }) => {
             <div
               key={u._id}
               onClick={() => toggle(u._id)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
-                selected.includes(u._id)
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${selected.includes(u._id)
                   ? 'bg-primary/5 border-primary/30'
                   : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-              }`}
+                }`}
             >
               {/* Checkbox */}
-              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                selected.includes(u._id) ? 'bg-primary border-primary' : 'border-gray-300'
-              }`}>
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${selected.includes(u._id) ? 'bg-primary border-primary' : 'border-gray-300'
+                }`}>
                 {selected.includes(u._id) && (
                   <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
-              <Avatar name={u.name} />
+              <Avatar name={u.name} profilePicture={u.profilePicture} />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-gray-800 truncate">{u.name}</p>
                 <p className="text-xs text-gray-400 truncate">{u.email}</p>
@@ -229,13 +231,20 @@ const GroupCard = ({ group, onDeleted, onUpdated }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [removing, setRemoving] = useState(null);
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleRemove = async (userId) => {
+  const handleRemove = async (userId, bypass = false) => {
+    if (bypass !== true) {
+      setConfirmRemove(userId);
+      return;
+    }
     setRemoving(userId);
     try {
       const { data } = await api.delete(`/groups/${group._id}/members/${userId}`);
       toast.success('Member removed');
       onUpdated(data);
+      setConfirmRemove(null);
     } catch {
       toast.error('Failed to remove member');
     } finally {
@@ -243,12 +252,16 @@ const GroupCard = ({ group, onDeleted, onUpdated }) => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(`Delete "${group.name}"? All members will be unassigned.`)) return;
+  const handleDelete = async (bypass = false) => {
+    if (bypass !== true) {
+      setShowDeleteConfirm(true);
+      return;
+    }
     try {
       await api.delete(`/groups/${group._id}`);
       toast.success('Group deleted');
       onDeleted(group._id);
+      setShowDeleteConfirm(false);
     } catch {
       toast.error('Failed to delete group');
     }
@@ -310,7 +323,7 @@ const GroupCard = ({ group, onDeleted, onUpdated }) => {
                 <p className="text-xs text-gray-400 italic text-center py-3">No members yet</p>
               ) : group.employees.map(emp => (
                 <div key={emp._id} className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100">
-                  <Avatar name={emp.name} />
+                  <Avatar name={emp.name} profilePicture={emp.profilePicture} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-gray-800 truncate">{emp.name}</p>
                     <p className="text-[10px] text-gray-400 truncate">{emp.email}</p>
@@ -352,6 +365,72 @@ const GroupCard = ({ group, onDeleted, onUpdated }) => {
 
       {showAdd && <AddMembersModal group={group} onClose={() => setShowAdd(false)} onUpdated={onUpdated} />}
       {showBroadcast && <BroadcastModal group={group} onClose={() => setShowBroadcast(false)} />}
+
+      {/* Remove Member Confirmation Modal */}
+      {confirmRemove && (() => {
+        const emp = group.employees.find(e => e._id === confirmRemove);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+              <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-6 mx-auto">
+                <UserMinus className="w-8 h-8" />
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 text-center leading-tight">
+                Remove <span className="text-red-600">"{emp?.name}"</span>?
+              </h2>
+              <p className="text-gray-500 text-xs sm:text-sm text-center mt-3 leading-relaxed">
+                This employee will be removed from <span className="font-bold text-gray-700">{group.name}</span>. They will become unassigned.
+              </p>
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setConfirmRemove(null)}
+                  className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRemove(confirmRemove, true)}
+                  disabled={removing === confirmRemove}
+                  className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {removing === confirmRemove ? 'Removing...' : 'Remove Member'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Delete Group Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
+              <Trash2 className="w-8 h-8" />
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 text-center leading-tight">
+              Delete Group <span className="text-red-600">"{group.name}"</span>?
+            </h2>
+            <p className="text-gray-500 text-xs sm:text-sm text-center mt-3 leading-relaxed">
+              This will permanently remove the group. All <span className="font-bold text-gray-700">{group.employees.length} members</span> will be unassigned and returned to the general directory.
+            </p>
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(true)}
+                className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-all active:scale-[0.98]"
+              >
+                Delete Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
@@ -449,7 +528,7 @@ const Groups = () => {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-pulse space-y-4">
               <div className="flex items-center gap-3">
@@ -467,7 +546,7 @@ const Groups = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
           {filtered.map(group => (
             <GroupCard
               key={group._id}

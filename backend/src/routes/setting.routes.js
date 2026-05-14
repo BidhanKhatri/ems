@@ -13,11 +13,11 @@ router.use(requireAuth);
 // Accessible by all users
 router.get('/today-status', getTodayStatus);
 router.get('/', getSettings);
+router.get('/holidays', getHolidays);
 
 // Accessible by ADMIN only
 router.use(requireRole('ADMIN'));
 router.put('/', updateSettings);
-router.get('/holidays', getHolidays);
 router.post('/holidays', createHoliday);
 router.delete('/holidays/:id', deleteHoliday);
 

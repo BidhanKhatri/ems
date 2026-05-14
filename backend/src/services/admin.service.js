@@ -9,6 +9,8 @@ import SystemSettings from '../models/SystemSettings.js';
 import ApiError from '../utils/ApiError.js';
 import { getIO } from '../socket.js';
 import { sendToUser } from './pushNotification.service.js';
+import { getSettings } from './setting.service.js';
+import { differenceInMinutes } from 'date-fns';
 
 export const getDashboardStats = async () => {
   const totalEmployees = await User.countDocuments({ role: 'EMPLOYEE', approvalStatus: 'APPROVED' });
@@ -108,15 +110,43 @@ export const processApproval = async (requestId, adminId, isApproved) => {
     
     attendance.approvalStatus = isApproved ? 'APPROVED' : 'REJECTED';
     attendance.status = isApproved ? 'LATE_APPROVED' : 'LATE_REJECTED';
-    
-    const pointsPenalty = isApproved ? -15 : -25;
+
+    let pointsPenalty = 0;
+    let penaltyReason = '';
+
+    if (!isApproved) {
+      // Rejected: fixed 10-point deduction
+      pointsPenalty = -10;
+      penaltyReason = 'Late check-in Rejected by Admin';
+    } else {
+      // Approved but still late: dynamic deduction based on lateness, max 5 points
+      const settings = await getSettings();
+      const NEPAL_TZ = 'Asia/Kathmandu';
+
+      // Parse scheduled check-in time (HH:mm) into today's date
+      const checkInDate = attendance.checkInTime; // actual Date object
+      const [schH, schM] = settings.checkInTime.split(':').map(Number);
+
+      // Build the scheduled check-in as a Date on the same day
+      const scheduledCheckin = new Date(checkInDate);
+      scheduledCheckin.setHours(schH, schM, 0, 0);
+
+      const minutesLate = Math.max(0, differenceInMinutes(checkInDate, scheduledCheckin));
+
+      // Cap the late window at lateMargin + 120 mins to keep formula sensible
+      const maxLateWindow = (settings.lateMargin || 30) + 120;
+      const ratio = Math.min(1, minutesLate / maxLateWindow);
+      pointsPenalty = -Math.max(1, Math.round(5 * ratio));
+      penaltyReason = `Late check-in Approved by Admin (${minutesLate} min late)`;
+    }
+
     attendance.pointsAwarded = pointsPenalty;
     await attendance.save({ session });
 
     await PerformanceLog.create([{
       userId: request.userId,
       points: pointsPenalty,
-      reason: `Late check-in ${isApproved ? 'Approved' : 'Rejected'} by Admin`
+      reason: penaltyReason
     }], { session });
 
     await User.findByIdAndUpdate(request.userId, {

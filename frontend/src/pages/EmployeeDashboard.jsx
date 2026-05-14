@@ -18,6 +18,7 @@ const EmployeeDashboard = () => {
   const [todayStatus, setTodayStatus] = useState({ isHoliday: false, message: '' });
   const [settings, setSettings] = useState(null);
   const [showEarlyModal, setShowEarlyModal] = useState(false);
+  const [earlyPenalty, setEarlyPenalty] = useState(0);
 
   // Performance Analytics
   const [performanceLogs, setPerformanceLogs] = useState([]);
@@ -138,19 +139,23 @@ const EmployeeDashboard = () => {
       const timeout = setTimeout(() => {
         const container = leaderboardContainerRef.current;
         const target = selfRankRef.current;
-        
-        // Calculate position relative to container
-        const targetTop = target.offsetTop;
+
+        // Use getBoundingClientRect for accurate positions regardless of nesting
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+
+        // Position of target's top relative to the container's scrollable area
+        const targetRelativeTop = targetRect.top - containerRect.top + container.scrollTop;
         const containerHeight = container.clientHeight;
         const targetHeight = target.clientHeight;
-        
-        // Center the target row in the scrollable area
-        const scrollTo = targetTop - (containerHeight / 2) + (targetHeight / 2);
-        
-        container.scrollTo({
-          top: scrollTo,
-          behavior: 'smooth'
-        });
+
+        // Aim to center the row; clamp so top ranks don't over-scroll downward
+        // and bottom ranks don't over-scroll upward
+        const desired = targetRelativeTop - (containerHeight / 2) + (targetHeight / 2);
+        const maxScroll = container.scrollHeight - containerHeight;
+        const scrollTo = Math.max(0, Math.min(maxScroll, desired));
+
+        container.scrollTo({ top: scrollTo, behavior: 'smooth' });
       }, 600);
       return () => clearTimeout(timeout);
     }
@@ -200,6 +205,23 @@ const EmployeeDashboard = () => {
     return currentMins > outMins;
   }, [settings, todayAttendance]);
 
+  const computeEarlyPenalty = () => {
+    if (!settings?.checkOutTime || !settings?.checkInTime) return 0;
+    const now = new Date();
+    const [outH, outM] = settings.checkOutTime.split(':').map(Number);
+    const targetMins = outH * 60 + outM;
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+
+    if (currentMins >= targetMins) return 0;
+
+    const [inH, inM] = settings.checkInTime.split(':').map(Number);
+    const startMins = inH * 60 + inM;
+    const totalShiftMinutes = targetMins - startMins;
+    const remainingMinutes = targetMins - currentMins;
+
+    return Math.round(5 * (remainingMinutes / Math.max(1, totalShiftMinutes)));
+  };
+
   const handleCheckIn = async () => {
     setLoading(true);
     try {
@@ -220,6 +242,8 @@ const EmployeeDashboard = () => {
       const [targetH, targetM] = settings.checkOutTime.split(':').map(Number);
       const targetMins = targetH * 60 + targetM;
       if (currentMins < targetMins) {
+        // Recompute penalty fresh at the moment the modal opens
+        setEarlyPenalty(computeEarlyPenalty());
         setShowEarlyModal(true);
         return;
       }
@@ -488,13 +512,25 @@ const WorkProgressBar = ({ settings, todayAttendance }) => {
                         }
                       </div>
                       <div className="relative flex-shrink-0">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold ${
-                          entry.isSelf
-                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                            : 'bg-gray-200 text-gray-400 border border-gray-200 blur-[3px] select-none'
-                        }`}>
-                          {entry.name.charAt(0)}
-                        </div>
+                        {entry.isSelf ? (
+                          <div className="w-8 h-8 rounded-xl overflow-hidden border-2 border-indigo-300 shadow-sm flex-shrink-0">
+                            {user?.profilePicture ? (
+                              <img
+                                src={user.profilePicture}
+                                alt={user.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-xs font-extrabold text-indigo-700">
+                                {entry.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold bg-gray-200 text-gray-400 border border-gray-200 blur-[3px] select-none">
+                            {entry.name.charAt(0)}
+                          </div>
+                        )}
                         {entry.isSelf && (
                           <span className="absolute -top-1 -right-1 text-[7px] bg-indigo-500 text-white font-bold px-1 rounded-full leading-relaxed">YOU</span>
                         )}
@@ -663,27 +699,41 @@ const WorkProgressBar = ({ settings, todayAttendance }) => {
       {showEarlyModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-gray-900/20">
           <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 mb-6 mx-auto">
+            <div className="w-16 h-16 bg-red-50 rounded-xl flex items-center justify-center text-red-500 mb-6 mx-auto">
               <AlertCircle className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-black text-gray-800 text-center tracking-tight">Early Check-out?</h2>
             <p className="text-gray-500 text-sm text-center mt-3 leading-relaxed font-medium">
               You are attempting to check out before the official time (<span className="text-gray-800 font-bold">{formatSimpleTime(settings?.checkOutTime)}</span>).
-              This might affect your performance score.
             </p>
-            <div className="flex flex-col gap-3 mt-8">
+
+            {earlyPenalty > 0 && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                <div className="bg-red-100 rounded-lg p-2 flex-shrink-0">
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Point Deduction</p>
+                  <p className="text-sm text-red-900 font-semibold mt-0.5">
+                    <span className="text-red-600 font-black text-base">−{earlyPenalty} pts</span> will be deducted from your score
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 mt-6">
               <button
                 onClick={() => handleCheckOut(true)}
                 disabled={loading}
-                className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full px-4 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 shadow-lg shadow-red-100 transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Confirm Early Check-out'}
+                {loading ? 'Processing...' : `Confirm Check-out${earlyPenalty > 0 ? ` (−${earlyPenalty} pts)` : ''}`}
               </button>
               <button
                 onClick={() => setShowEarlyModal(false)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-all"
               >
-                Cancel
+                Stay & Keep Points
               </button>
             </div>
           </div>

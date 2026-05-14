@@ -124,6 +124,9 @@ export const checkIn = async (userId) => {
     if (needsApproval) {
       const checkInTimeStr = formatInTimeZone(now, NEPAL_TZ, 'hh:mm a');
       const delayMins = currentTimeInMinutes - targetTimeInMinutes;
+
+      // Fetch user once here so it's available for both email and push notification
+      const user = await User.findById(userId).session(session);
       
       const formatLateness = (mins) => {
         if (mins < 60) return `${mins} min`;
@@ -152,7 +155,6 @@ export const checkIn = async (userId) => {
 
       // Send email notification to admin
       if (settings.approvalNotificationEmail) {
-        const user = await User.findById(userId).session(session);
         const subject = `Approval Required: Late Check-In - ${user.name}`;
         const html = `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
@@ -195,20 +197,17 @@ export const checkIn = async (userId) => {
           </div>
         `;
         
-        // We don't await the email send to avoid blocking the transaction/response, 
-        // but we should catch errors. Actually, better to send after transaction commit
-        // but for simplicity and immediate feedback we trigger it.
-        // To be safe, we'll trigger it without blocking.
         sendEmail({ to: settings.approvalNotificationEmail, subject, html }).catch(err => {
           console.error('Failed to send approval notification email:', err);
         });
-        
-        sendToAdmins(
-          'Late Check-In Request', 
-          `${user.name} requires approval for late check-in at ${checkInTimeStr}.`,
-          { type: 'APPROVAL_REQUEST', userId: user._id.toString() }
-        ).catch(err => console.error('Push notification failed:', err));
       }
+      
+      // Always send socket/push notification to admins regardless of email setting
+      sendToAdmins(
+        'Late Check-In Request', 
+        `${user.name} requires approval for late check-in at ${checkInTimeStr}.`,
+        { type: 'APPROVAL_REQUEST', userId: user._id.toString() }
+      ).catch(err => console.error('Push notification failed:', err));
     } else {
       // Normal check in notification
       const user = await User.findById(userId).session(session);
@@ -236,64 +235,86 @@ export const checkIn = async (userId) => {
 };
 
 export const checkOut = async (userId) => {
-  const now = new Date();
-  const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
-  const attendance = await Attendance.findOne({ userId, date: today });
-  
-  if (!attendance) {
-    throw new ApiError(400, 'Cannot check out without checking in');
-  }
-  
-  if (attendance.checkOutTime) {
-    throw new ApiError(400, 'Already checked out today');
-  }
+  const session = await Attendance.startSession();
+  session.startTransaction();
 
-  attendance.checkOutTime = now;
-  const checkOutTimeStr = formatInTimeZone(now, NEPAL_TZ, 'hh:mm a');
+  try {
+    const now = new Date();
+    const today = formatInTimeZone(now, NEPAL_TZ, 'yyyy-MM-dd');
+    const attendance = await Attendance.findOne({ userId, date: today }).session(session);
+    
+    if (!attendance) {
+      throw new ApiError(400, 'Cannot check out without checking in');
+    }
+    
+    if (attendance.checkOutTime) {
+      throw new ApiError(400, 'Already checked out today');
+    }
 
-  const user = await User.findById(userId);
-  sendToAdmins(
-    'Employee Checked Out', 
-    `${user.name} checked out at ${checkOutTimeStr}.`,
-    { type: 'ATTENDANCE_CHECKOUT', userId: user._id.toString() }
-  ).catch(err => console.error('Push notification failed:', err));
+    attendance.checkOutTime = now;
+    const checkOutTimeStr = formatInTimeZone(now, NEPAL_TZ, 'hh:mm a');
 
-  const settings = await getSettings();
-  const scheduledCheckout = getScheduledDateTime(now, settings.checkOutTime);
-  let overtimeMinutes = 0;
-  let overtimePoints = 0;
+    const user = await User.findById(userId).session(session);
 
-  if (now > scheduledCheckout) {
-    overtimeMinutes = Math.max(0, differenceInMinutes(now, scheduledCheckout));
-    // 1 point per 15 mins, capped at 16 points/day (4 hours)
-    overtimePoints = Math.min(16, Math.floor(overtimeMinutes / 15));
-  }
+    const settings = await getSettings();
+    const scheduledCheckout = getScheduledDateTime(now, settings.checkOutTime);
+    let overtimeMinutes = 0;
+    let overtimePoints = 0;
+    let earlyPenalty = 0;
 
-  attendance.overtimeMinutes = overtimeMinutes;
-  attendance.overtimePoints = overtimePoints;
-  await attendance.save();
+    if (now > scheduledCheckout) {
+      overtimeMinutes = Math.max(0, differenceInMinutes(now, scheduledCheckout));
+      // 1 point per 15 mins, capped at 16 points/day (4 hours)
+      overtimePoints = Math.min(16, Math.floor(overtimeMinutes / 15));
+      
+      attendance.overtimeMinutes = overtimeMinutes;
+      attendance.overtimePoints = overtimePoints;
+      
+      if (overtimePoints > 0) {
+        await addPerformancePoints(userId, overtimePoints, `Overtime reward: ${overtimeMinutes} mins beyond scheduled checkout`, session);
+      }
+    } else if (now < scheduledCheckout) {
+      const scheduledCheckin = getScheduledDateTime(now, settings.checkInTime);
+      const totalShiftMinutes = differenceInMinutes(scheduledCheckout, scheduledCheckin);
+      const remainingMinutes = differenceInMinutes(scheduledCheckout, now);
+      
+      // Dynamic deduction: max 5 points, proportional to remaining time
+      earlyPenalty = Math.round(5 * (remainingMinutes / Math.max(1, totalShiftMinutes)));
+      
+      if (earlyPenalty > 0) {
+        attendance.pointsAwarded -= earlyPenalty;
+        await addPerformancePoints(userId, -earlyPenalty, `Early check-out penalty: ${remainingMinutes} mins before scheduled time`, session);
+      }
+    }
 
-  if (overtimePoints > 0) {
-    await PerformanceLog.create({
-      userId,
-      points: overtimePoints,
-      reason: `Overtime reward: ${overtimeMinutes} mins beyond scheduled checkout`,
-    });
+    await attendance.save({ session });
+
     await User.findByIdAndUpdate(userId, {
-      $inc: { performanceScore: overtimePoints, totalPoints: overtimePoints },
-    });
+      nextActivityDueAt: null,
+      lastActivityPromptAt: null,
+    }, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Post-transaction notifications
+    sendToAdmins(
+      'Employee Checked Out', 
+      `${user.name} checked out at ${checkOutTimeStr}.`,
+      { type: 'ATTENDANCE_CHECKOUT', userId: user._id.toString() }
+    ).catch(err => console.error('Push notification failed:', err));
+
+    // Notify admins and leaderboard of dashboard update
+    getIO().emit('admin:dashboard-update', { userId });
+    getIO().emit('leaderboard:update');
+    getIO().to(userId.toString()).emit('attendance:update');
+
+    return attendance;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
   }
-
-  await User.findByIdAndUpdate(userId, {
-    nextActivityDueAt: null,
-    lastActivityPromptAt: null,
-  });
-
-  // Notify admins of dashboard update
-  getIO().emit('admin:dashboard-update', { userId });
-  getIO().emit('leaderboard:update');
-
-  return attendance;
 };
 
 export const getMyAttendance = async (userId) => {

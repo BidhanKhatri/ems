@@ -281,7 +281,7 @@ const Employees = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                   <button onClick={() => setFeedbackFor(row._id)} className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 flex items-center justify-center gap-2">
+                   <button onClick={() => setFeedbackModalFor(row._id)} className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 flex items-center justify-center gap-2">
                      <MessageSquarePlus className="w-4 h-4" />
                      <span className="text-[11px] font-bold uppercase tracking-wider">Feedback</span>
                    </button>

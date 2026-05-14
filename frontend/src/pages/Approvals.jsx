@@ -47,7 +47,9 @@ const Approvals = () => {
     const handleNewNotification = (data) => {
        // Only show toast if it's an approval request
        if (data.metadata?.type === 'APPROVAL_REQUEST') {
-         toast.info(data.message || 'New account approval request received');
+         toast.info(data.title || 'New Approval Request', {
+           description: data.message || 'A new request requires your review.'
+         });
          fetchData();
        }
     };

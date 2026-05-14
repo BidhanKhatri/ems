@@ -84,7 +84,7 @@ export const getEmployeeLeaderboard = catchAsync(async (req, res) => {
   const requestingUserId = req.user.id;
   
   const users = await User.find({ role: 'EMPLOYEE', isActive: true, approvalStatus: 'APPROVED' })
-    .select('name performanceScore totalPoints')
+    .select('name performanceScore totalPoints profilePicture')
     .sort({ performanceScore: -1 })
     .lean();
 
@@ -101,6 +101,7 @@ export const getEmployeeLeaderboard = catchAsync(async (req, res) => {
       isSelf,
       name: maskedName,
       performanceScore: u.performanceScore ?? 0,
+      profilePicture: isSelf ? u.profilePicture : null,
     };
   });
 

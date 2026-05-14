@@ -35,7 +35,7 @@ const AmPmTimePicker = ({ value, onChange }) => {
   };
 
   return (
-    <div className="flex items-center space-x-1">
+    <div className="flex items-center gap-1">
       <select 
         value={displayHour.toString()} 
         onChange={handleHourChange}
@@ -165,35 +165,32 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 pb-0">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">System Configuration</h2>
-        <div className="flex border-b border-gray-200">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 pb-0">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">System Configuration</h2>
+        <div className="flex overflow-x-auto border-b border-gray-200 scrollbar-hide">
           <button
             onClick={() => setActiveTab('schedules')}
-            className={`py-3 px-6 text-sm font-medium border-b-2 flex items-center transition-colors ${activeTab === 'schedules' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+            className={`py-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 flex items-center transition-colors whitespace-nowrap ${activeTab === 'schedules' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <SettingsIcon className="w-4 h-4 mr-2" /> Global Rules
+            <SettingsIcon className="w-4 h-4 mr-1.5" /> Global Rules
           </button>
           <button
             onClick={() => setActiveTab('holidays')}
-            className={`py-3 px-6 text-sm font-medium border-b-2 flex items-center transition-colors ${activeTab === 'holidays' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+            className={`py-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 flex items-center transition-colors whitespace-nowrap ${activeTab === 'holidays' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <CalendarIcon className="w-4 h-4 mr-2" /> Holiday Calendar
+            <CalendarIcon className="w-4 h-4 mr-1.5" /> Holiday Calendar
           </button>
           <button
             onClick={() => setActiveTab('email')}
-            className={`py-3 px-6 text-sm font-medium border-b-2 flex items-center transition-colors ${activeTab === 'email' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+            className={`py-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 flex items-center transition-colors whitespace-nowrap ${activeTab === 'email' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <Mail className="w-4 h-4 mr-2" /> Email Setup
+            <Mail className="w-4 h-4 mr-1.5" /> Email Setup
           </button>
         </div>
       </div>
 
       {activeTab === 'schedules' && (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
           {loadingConfig ? (
             <div className="flex items-center justify-center p-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -211,7 +208,7 @@ const Settings = () => {
                     <h3 className="text-lg font-bold text-gray-900">Attendance Rules</h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Standard Check-In</label>
                       <AmPmTimePicker
@@ -228,7 +225,7 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center">
                         Early Margin <span className="text-[10px] text-gray-400 font-normal ml-1">(mins)</span>
@@ -288,7 +285,7 @@ const Settings = () => {
       )}
 
       {activeTab === 'email' && (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
           {loadingConfig ? (
             <div className="flex items-center justify-center p-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

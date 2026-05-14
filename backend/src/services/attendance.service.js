@@ -281,6 +281,14 @@ export const checkOut = async (userId) => {
       // Dynamic deduction: max 5 points, proportional to remaining time
       earlyPenalty = Math.round(5 * (remainingMinutes / Math.max(1, totalShiftMinutes)));
       
+      // Safety cap: ensure penalty does not exceed 5 points
+      const originalPenalty = earlyPenalty;
+      earlyPenalty = Math.min(5, Math.max(0, earlyPenalty));
+
+      if (earlyPenalty > 0 || originalPenalty > 5) {
+        console.log(`[Checkout Debug] User: ${userId}, Date: ${today}, Remaining: ${remainingMinutes}m, Shift: ${totalShiftMinutes}m, CalcPenalty: ${originalPenalty}, FinalPenalty: ${earlyPenalty}`);
+      }
+      
       if (earlyPenalty > 0) {
         attendance.pointsAwarded -= earlyPenalty;
         await addPerformancePoints(userId, -earlyPenalty, `Early check-out penalty: ${remainingMinutes} mins before scheduled time`, session);

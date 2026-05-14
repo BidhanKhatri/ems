@@ -274,19 +274,29 @@ export const checkOut = async (userId) => {
         await addPerformancePoints(userId, overtimePoints, `Overtime reward: ${overtimeMinutes} mins beyond scheduled checkout`, session);
       }
     } else if (now < scheduledCheckout) {
-      const scheduledCheckin = getScheduledDateTime(now, settings.checkInTime);
-      const totalShiftMinutes = differenceInMinutes(scheduledCheckout, scheduledCheckin);
-      const remainingMinutes = differenceInMinutes(scheduledCheckout, now);
+      // Use Nepal-timezone-aware minute components for consistent dynamic calculation
+      const currentHour = parseInt(formatInTimeZone(now, NEPAL_TZ, 'H'));
+      const currentMinute = parseInt(formatInTimeZone(now, NEPAL_TZ, 'm'));
+      const currentMins = currentHour * 60 + currentMinute;
+
+      const [outH, outM] = settings.checkOutTime.split(':').map(Number);
+      const targetMins = outH * 60 + outM;
+
+      const [inH, inM] = settings.checkInTime.split(':').map(Number);
+      const startMins = inH * 60 + inM;
+
+      const totalShiftMinutes = Math.max(1, targetMins - startMins);
+      const remainingMinutes = Math.max(0, targetMins - currentMins);
       
       // Dynamic deduction: max 5 points, proportional to remaining time
-      earlyPenalty = Math.round(5 * (remainingMinutes / Math.max(1, totalShiftMinutes)));
+      earlyPenalty = Math.round(5 * (remainingMinutes / totalShiftMinutes));
       
       // Safety cap: ensure penalty does not exceed 5 points
       const originalPenalty = earlyPenalty;
       earlyPenalty = Math.min(5, Math.max(0, earlyPenalty));
 
-      if (earlyPenalty > 0 || originalPenalty > 5) {
-        console.log(`[Checkout Debug] User: ${userId}, Date: ${today}, Remaining: ${remainingMinutes}m, Shift: ${totalShiftMinutes}m, CalcPenalty: ${originalPenalty}, FinalPenalty: ${earlyPenalty}`);
+      if (originalPenalty !== earlyPenalty || originalPenalty > 0) {
+        console.log(`[Checkout Debug] User: ${userId}, Date: ${today}, NepalCurrentMins: ${currentMins}, TargetMins: ${targetMins}, ShiftMins: ${totalShiftMinutes}, RemainingMins: ${remainingMinutes}, CalcPenalty: ${originalPenalty}, FinalPenalty: ${earlyPenalty}`);
       }
       
       if (earlyPenalty > 0) {
